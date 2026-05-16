@@ -1,0 +1,92 @@
+<section class="panel">
+  <div class="section-heading"><h2>Database Settings</h2></div>
+  <p class="subtle" style="margin-bottom:12px">Schema version: <code>{{schema_version}}</code></p>
+  <form action="/settings/save" method="post" class="inline-form" style="flex-wrap:wrap;gap:10px">
+    <label style="flex:1;min-width:300px">
+      <span style="display:block;margin-bottom:4px;font-size:13px;color:var(--muted)">Database file path</span>
+      <div style="display:flex;gap:6px">
+        <input type="text" name="db_path" value="{{db_path}}" required style="flex:1;box-sizing:border-box;font-family:monospace">
+        <button type="button" onclick="document.getElementById('dbFilePicker').click()" style="white-space:nowrap">Browse...</button>
+      </div>
+    </label>
+    <button type="submit" style="align-self:flex-end">Save &amp; Reload</button>
+  </form>
+  <p class="subtle">Enter the path manually, or click Browse to pick a .db file from your computer &mdash; it will be copied into the app's <code>dbs/</code> folder and activated automatically.</p>
+  <input type="file" id="dbFilePicker" accept=".db,.sqlite" style="display:none">
+</section>
+
+<section class="panel">
+  <div class="section-heading"><h2>Create New Database</h2></div>
+  <p>Create a fresh personal inventory database at one of these locations.</p>
+
+  <div style="margin:16px 0;padding:14px;background:rgba(128,128,128,0.06);border:1px solid var(--border);border-radius:6px">
+    <div style="font-weight:600;margin-bottom:8px;font-size:14px">Quick create &mdash; in app folder</div>
+    <form action="/settings/create" method="post" class="inline-form" style="flex-wrap:wrap;gap:10px;margin:0">
+      <input type="text" name="db_name" placeholder="my_inventory.db" required class="sm-input" style="width:240px;font-family:monospace">
+      <button type="submit">Create &amp; Switch</button>
+    </form>
+    <p class="subtle" style="margin:6px 0 0">Creates the database in the app's <code>dbs/</code> folder. Just pick a name.</p>
+  </div>
+
+  <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+
+  <div style="font-weight:600;margin-bottom:8px;font-size:14px;color:var(--muted)">Custom path</div>
+  <form action="/settings/create" method="post" class="inline-form" style="flex-wrap:wrap;gap:10px">
+    <label style="flex:1;min-width:300px">
+      <span style="display:block;margin-bottom:4px;font-size:13px;color:var(--muted)">Full path to new database file</span>
+      <input type="text" name="db_path" placeholder="/path/to/my_inventory.db" required style="width:100%;box-sizing:border-box;font-family:monospace">
+    </label>
+    <button type="submit" style="align-self:flex-end">Create &amp; Switch</button>
+  </form>
+  <p class="subtle">Specify the exact filesystem path where the new database should be created.</p>
+</section>
+
+<section class="panel add-panel">
+  <h2>Add Item</h2>
+  <form action="/manage/add-item" method="post" class="inline-form">
+    <input name="name" placeholder="Item name" required class="sm-input" style="width:180px">
+    <input name="catid" type="number" min="0" value="1" aria-label="Category ID" required class="sm-input">
+    <button type="submit">Add Item</button>
+  </form>
+</section>
+
+<section class="panel add-panel">
+  <h2>Add Station</h2>
+  <form action="/manage/add-station" method="post" class="inline-form">
+    <input name="name" placeholder="Station name" required class="sm-input" style="width:200px">
+    <input name="code" placeholder="Code" required class="sm-input" style="width:120px">
+    {{system_select}}
+    <button type="submit">Add Station</button>
+  </form>
+</section>
+
+<script>
+document.getElementById('dbFilePicker').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var btn = this.nextElementSibling;
+  if (btn) btn.disabled = true;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var base64 = ev.target.result.split(',')[1];
+    var params = new URLSearchParams();
+    params.set('filename', file.name);
+    params.set('filedata', base64);
+    fetch('/settings/upload-db', { method: 'POST', body: params })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) {
+          window.location.href = '/manage';
+        } else {
+          alert('Upload failed: ' + (d.error || 'unknown error'));
+          if (btn) btn.disabled = false;
+        }
+      })
+      .catch(function(err) {
+        alert('Upload failed: ' + err.message);
+        if (btn) btn.disabled = false;
+      });
+  };
+  reader.readAsDataURL(file);
+});
+</script>

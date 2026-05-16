@@ -1,0 +1,66 @@
+<section class="panel add-panel">
+  <h2>Add Inventory</h2>
+  <form action="/manage/add" method="post" class="inline-form" onsubmit="return (function(){var id=document.getElementById('item-id').value;var name=document.getElementById('item-name-input').value;return id!='' && (window.ADD_ITEMS||[]).some(function(i){return String(i.id)===id && i.name===name});})()">
+    <div class="autocomplete-wrap" style="display:inline-block;position:relative">
+      <label for="item-name-input" style="position:absolute;top:-16px;font-size:11px;color:var(--muted)">Item</label>
+      <input type="text" name="item_name" id="item-name-input" placeholder="Start typing..." autocomplete="off" oninput="itemAutocomplete(this)" required style="width:180px" class="sm-input">
+      <input type="hidden" name="itemid" id="item-id">
+      <div class="search-suggestions" id="item-suggestions"></div>
+    </div>
+    <div class="autocomplete-wrap" style="display:inline-block;position:relative">
+      <label for="station-name-input" style="position:absolute;top:-16px;font-size:11px;color:var(--muted)">Station</label>
+      <input type="text" name="station_name" id="station-name-input" placeholder="Start typing..." autocomplete="off" oninput="stationAutocomplete(this)" style="width:180px" class="sm-input">
+      <input type="hidden" name="stationid" id="station-id" class="station-id">
+      <div class="search-suggestions" id="station-suggestions"></div>
+    </div>
+    <div style="display:inline-block;position:relative">
+      <label for="qual" style="display:block;font-size:11px;color:var(--muted);margin-bottom:2px">Quality</label>
+      <input name="qual" id="qual" type="number" min="0" max="100" value="100" required class="sm-input" style="width:80px">
+    </div>
+    <div style="display:inline-block;position:relative">
+      <label for="qty_scu" style="display:block;font-size:11px;color:var(--muted);margin-bottom:2px">QTY (SCU)</label>
+      <input name="qty_scu" id="qty_scu" type="number" min="0.01" step="0.01" value="1.00" required class="sm-input" style="width:100px">
+    </div>
+    <button type="submit">Add</button>
+  </form>
+  <script>var ADD_ITEMS = {{add_items_json}}; var ADD_STATIONS = {{add_stations_json}};</script>
+</section>
+
+<section class="panel">
+  <div class="section-heading"><h2>Inventory Rows</h2></div>
+  <div class="filters">
+    <form method="get" action="/manage" style="display:contents">
+      <div class="search-form" style="display:contents">
+        <div class="search-wrap">
+          <input type="search" name="q" placeholder="Search items..." value="{{search_query}}">
+        </div>
+        <div class="filter-group">
+          <label>Quality Range</label>
+          <div class="range-inputs">
+            <input type="number" name="qual_min" placeholder="Min" value="{{qual_min}}" min="0" max="100" style="width:70px">
+            <span class="range-sep">–</span>
+            <input type="number" name="qual_max" placeholder="Max" value="{{qual_max}}" min="0" max="100" style="width:70px">
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>QTY Range (SCU)</label>
+          <div class="range-inputs">
+            <input type="number" name="qty_min" placeholder="Min" value="{{qty_min}}" min="0" step="0.01" style="width:80px">
+            <span class="range-sep">–</span>
+            <input type="number" name="qty_max" placeholder="Max" value="{{qty_max}}" min="0" step="0.01" style="width:80px">
+          </div>
+        </div>
+        <button type="submit">Filter</button>
+      </div>
+    </form>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Item</th><th>Station</th><th>Qual</th><th>QTY</th><th>Actions</th></tr></thead>
+      <tbody>{{inventory_rows}}</tbody>
+    </table>
+  </div>
+  {{nav}}
+</section>
+
+

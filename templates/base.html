@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en" class="{{theme_class}}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Personal Inventory</title>
+    <link rel="icon" type="image/png" href="/favicon">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script>
+      (function () {
+        var theme = localStorage.getItem("theme");
+        if (theme) {
+          document.documentElement.className = theme;
+          document.cookie = "pref_theme=" + theme + "; SameSite=Lax; Path=/; Max-Age=" + (86400 * 365);
+        }
+      })();
+      function setCookie(name, value, days) {
+        document.cookie = name + "=" + value + "; SameSite=Lax; Path=/; Max-Age=" + (days * 86400);
+      }
+      function toggleTheme() {
+        var html = document.documentElement;
+        var theme = html.className === "light" ? "dark" : "light";
+        html.className = theme;
+        localStorage.setItem("theme", theme);
+        setCookie("pref_theme", theme, 365);
+      }
+      function changePerPage(sel) {
+        var n = sel.options[sel.selectedIndex].text.split(" ")[0];
+        if (n) setCookie("pref_per_page", n, 365);
+        location.href = sel.value;
+      }
+      function itemAutocomplete(input) {
+        document.getElementById("item-id").value = "";
+        var val = input.value.trim().toLowerCase();
+        var container = document.getElementById("item-suggestions");
+        if (!container || val.length === 0) {
+          if (container) container.style.display = "none";
+          return;
+        }
+        var matches = (window.ADD_ITEMS || []).filter(function(item) {
+          return item.name.toLowerCase().indexOf(val) === 0;
+        }).slice(0, 5);
+        container.innerHTML = "";
+        if (matches.length === 0) {
+          container.style.display = "none";
+          return;
+        }
+        matches.forEach(function(item) {
+          var div = document.createElement("div");
+          div.className = "suggestion-item";
+          div.textContent = item.name;
+          div.addEventListener("click", function() {
+            input.value = item.name;
+            document.getElementById("item-id").value = item.id;
+            container.style.display = "none";
+          });
+          container.appendChild(div);
+        });
+        container.style.display = "block";
+      }
+      function stationAutocomplete(input) {
+        var wrap = input.closest(".autocomplete-wrap");
+        if (!wrap) return;
+        var hidden = wrap.querySelector(".station-id");
+        if (hidden) hidden.value = "";
+        var container = wrap.querySelector(".search-suggestions");
+        if (!container || input.value.trim().length === 0) {
+          if (container) container.style.display = "none";
+          return;
+        }
+        var val = input.value.trim().toLowerCase();
+        var matches = (window.ADD_STATIONS || []).filter(function(s) {
+          return s.name.toLowerCase().indexOf(val) === 0;
+        }).slice(0, 5);
+        container.innerHTML = "";
+        if (matches.length === 0) {
+          container.style.display = "none";
+          return;
+        }
+        matches.forEach(function(s) {
+          var div = document.createElement("div");
+          div.className = "suggestion-item";
+          div.textContent = s.name;
+          div.addEventListener("click", function() {
+            input.value = s.name;
+            if (hidden) hidden.value = s.id;
+            container.style.display = "none";
+          });
+          container.appendChild(div);
+        });
+        container.style.display = "block";
+      }
+      document.addEventListener("click", function (event) {
+        if (event.target.closest(".autocomplete-wrap")) return;
+        document.querySelectorAll(".search-suggestions").forEach(function(c) {
+          c.style.display = "none";
+        });
+      });
+      window.addEventListener("submit", function (event) {
+        if (event.defaultPrevented) return;
+        var buttons = event.target.querySelectorAll("button");
+        buttons.forEach(function (button) {
+          button.disabled = true;
+          button.dataset.originalText = button.textContent;
+          button.textContent = "Working";
+        });
+      });
+      function openModal(title, formHtml) {
+        document.getElementById("modal-title").textContent = title;
+        document.getElementById("modal-body").innerHTML = formHtml;
+        document.getElementById("modal").style.display = "flex";
+      }
+      function closeModal() {
+        document.getElementById("modal").style.display = "none";
+      }
+      function openModalFrom(btn, title) {
+        var id = btn.getAttribute("data-modal");
+        var html = document.getElementById(id).innerHTML;
+        openModal(title, html);
+      }
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Personal Inventory</h1>
+        <p class="network-info">{{local_url}} &middot; {{network_url}}</p>
+      </div>
+      <nav class="nav-links">
+        <a class="button ghost" href="/manage">Inventory</a>
+        <a class="button ghost" href="/settings">Settings</a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">&#x263E;</button>
+      </nav>
+    </header>
+    <main>{{notice_html}}{{content}}</main>
+    <div id="modal" class="modal-overlay" style="display:none" onclick="if(event.target==this)closeModal()">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span id="modal-title"></span>
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+.DS_Store
+.env
+__pycache__/
+*.bak
+*.sqbpro
+venv/
+build/
+dist/
+*.pyc
+*.egg-info/
