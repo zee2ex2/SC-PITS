@@ -6,7 +6,10 @@ SCHEMA_VERSION = 1
 def db_connect(database, timeout=10):
     db = sqlite3.connect(database, timeout=timeout)
     db.row_factory = sqlite3.Row
-    db.execute("PRAGMA journal_mode=WAL")
+    try:
+        db.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.OperationalError:
+        db.execute("PRAGMA journal_mode=DELETE")
     db.execute("PRAGMA foreign_keys = ON")
     return db
 

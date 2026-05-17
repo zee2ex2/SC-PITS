@@ -33,10 +33,7 @@ Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription
 [Files]
 Source: "dist\SC PITS\SC PITS.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\SC PITS\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "dist\SC PITS\config.json"; DestDir: "{app}"; Flags: ignoreversion onlyifdoesntexist
-Source: "dist\SC PITS\mainInventory"; DestDir: "{app}"; Flags: ignoreversion onlyifdoesntexist
 Source: "dist\SC PITS\icon_PITS.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\SC PITS\dbs\*"; DestDir: "{app}\dbs"; Flags: ignoreversion recursesubdirs createallsubdirs onlyifdoesntexist
 
 [Icons]
 Name: "{group}\{#MyAppShortName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"

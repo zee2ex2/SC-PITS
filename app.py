@@ -32,6 +32,8 @@ if getattr(sys, 'frozen', False):
     BASE_DIR = Path(sys._MEIPASS)
     if sys.platform == "darwin":
         DATA_DIR = Path.home() / "Library" / "Application Support" / "SC PITS"
+    elif sys.platform == "win32":
+        DATA_DIR = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / "SC PITS"
     else:
         exe_dir = Path(sys.executable).resolve().parent
         DATA_DIR = exe_dir
