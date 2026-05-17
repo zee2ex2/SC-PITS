@@ -38,7 +38,6 @@
         <input type="hidden" name="qual_min" value="{{qual_min}}">
         <input type="hidden" name="qual_max" value="{{qual_max}}">
         <input type="hidden" name="qty_min" value="{{qty_min}}">
-        <input type="hidden" name="qty_max" value="{{qty_max}}">
       </form>
       <button class="icon-btn" onclick="showFilter('filter')" aria-label="Filter" title="Filter">&#x2699;&#xFE0F;</button>
     </div>
@@ -71,11 +70,6 @@
           </div>
           <input type="hidden" name="qty_min" id="qty-min-cents" value="{{qty_min}}">
           <div class="slider-values" id="qty-display">0.00 SCU</div>
-        </div>
-
-        <div class="filter-group">
-          <label>Max QTY (SCU)</label>
-          <input type="number" name="qty_max" placeholder="Max" value="{{qty_max}}" min="0" step="0.01" style="width:100%;margin-top:2px">
         </div>
 
         <div style="margin-top:16px;display:flex;gap:8px">

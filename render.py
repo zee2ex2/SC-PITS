@@ -216,7 +216,7 @@ def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_co
         nav=nav,
         search_query=html.escape(search, quote=True),
         qual_min=html.escape(str(qual_min if qual_min is not None else "0"), quote=True),
-        qual_max=html.escape(str(qual_max if qual_max is not None else "100"), quote=True),
+        qual_max=html.escape(str(qual_max if qual_max is not None else "1000"), quote=True),
         qty_min=html.escape(str(qty_min if qty_min else ""), quote=True),
         qty_max=html.escape(str(qty_max if qty_max else ""), quote=True),
     )
