@@ -8,3 +8,6 @@ build/
 dist/
 *.pyc
 *.egg-info/
+icon_PITS.icns
+icon_PITS.ico
+icon_PITS.png
