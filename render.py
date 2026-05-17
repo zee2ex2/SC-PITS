@@ -108,20 +108,19 @@ def render_pagination_nav(base_params, total, page, per_page, page_key="page", p
 def ext_context(extensions_ctx=None):
     styles = ""
     scripts = ""
-    nav_items_html = ""
-    settings_sections_html = ""
+    nav_items = ""
     ext_data = {}
     if extensions_ctx:
         for ext_name, ctx in extensions_ctx.items():
             for k, v in ctx.items():
-                if k.startswith("_"):
-                    continue
-                ext_data[k] = v
+                if k == "_nav_html":
+                    nav_items += str(v)
+                elif not k.startswith("_"):
+                    ext_data[k] = v
     return {
         "ext_styles": styles,
         "ext_scripts": scripts,
-        "ext_nav_items": nav_items_html,
-        "ext_settings": settings_sections_html,
+        "ext_nav_items": nav_items,
         "ext_data": ext_data,
         "ext_data_json": json.dumps(ext_data, ensure_ascii=False),
     }

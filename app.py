@@ -181,6 +181,7 @@ class AppHandler(BaseHTTPRequestHandler):
         for ext in EXTENSIONS:
             resp, handled = ext.on_route(path, qs, None, "GET")
             if handled:
+                _refresh_ext_contexts()
                 if isinstance(resp, tuple):
                     body, _ = resp
                     self.respond(body)
@@ -221,6 +222,7 @@ class AppHandler(BaseHTTPRequestHandler):
         for ext in EXTENSIONS:
             resp, handled = ext.on_route(parsed.path, {}, data, "POST")
             if handled:
+                _refresh_ext_contexts()
                 if isinstance(resp, tuple):
                     body, _ = resp
                     self.respond(body)
