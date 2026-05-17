@@ -105,16 +105,42 @@ def render_pagination_nav(base_params, total, page, per_page, page_key="page", p
     return nav
 
 
-def wrap_page(content, notice="", kind="success", prefs=None, local_url="", network_url="", db_compat_warning=None):
+def ext_context(extensions_ctx=None):
+    styles = ""
+    scripts = ""
+    nav_items_html = ""
+    settings_sections_html = ""
+    ext_data = {}
+    if extensions_ctx:
+        for ext_name, ctx in extensions_ctx.items():
+            for k, v in ctx.items():
+                if k.startswith("_"):
+                    continue
+                ext_data[k] = v
+    return {
+        "ext_styles": styles,
+        "ext_scripts": scripts,
+        "ext_nav_items": nav_items_html,
+        "ext_settings": settings_sections_html,
+        "ext_data": ext_data,
+        "ext_data_json": json.dumps(ext_data, ensure_ascii=False),
+    }
+
+
+def wrap_page(content, notice="", kind="success", prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None):
     notice_html = ""
     if db_compat_warning:
         notice_html += f'<div class="messages"><div class="message warning">{escape(db_compat_warning)}</div></div>'
     if notice:
         notice_html += f'<div class="messages"><div class="message {escape(kind)}">{escape(notice)}</div></div>'
     theme_class = "light" if prefs and prefs.get("theme") == "light" else "dark"
-    return render_template("base", notice_html=notice_html, content=content,
-                           theme_class=theme_class, local_url=escape(local_url),
-                           network_url=escape(network_url))
+    ctx = {"notice_html": notice_html, "content": content,
+           "theme_class": theme_class, "local_url": escape(local_url),
+           "network_url": escape(network_url)}
+    if ext_ctx:
+        ec = ext_context(ext_ctx)
+        ctx.update(ec)
+    return render_template("base", **ctx)
 
 
 def render_setup(missing, local_url="", network_url="", db_compat_warning=None):
@@ -123,18 +149,26 @@ def render_setup(missing, local_url="", network_url="", db_compat_warning=None):
     return wrap_page(content, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning)
 
 
-def render_settings(db_path, db=None, store=None, prefs=None, local_url="", network_url="", db_compat_warning=None):
+def render_settings(db_path, db=None, store=None, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None):
     system_select = ""
     schema_version = ""
+    ext_settings_html = ""
     if db and store:
         systems = store.systems(db)
         system_select = option_list(systems, "Star System", "systemid", value_key="id", label_key="Code", required=True)
         schema_version = str(store.get_schema_version(db))
-    content = render_template("settings", db_path=escape(str(db_path)), system_select=system_select, schema_version=escape(schema_version))
-    return wrap_page(content, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning)
+    if ext_ctx:
+        sections = []
+        for name, ctx in ext_ctx.items():
+            html = ctx.get("_settings_html", "")
+            if html:
+                sections.append(html)
+        ext_settings_html = "\n".join(sections)
+    content = render_template("settings", db_path=escape(str(db_path)), system_select=system_select, schema_version=escape(schema_version), ext_settings=ext_settings_html)
+    return wrap_page(content, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, ext_ctx=ext_ctx)
 
 
-def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_compat_warning=None):
+def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None):
     page = int(qs.get("page", "1"))
     per_page = int(qs.get("per_page", prefs.get("per_page", "15") if prefs else "15"))
     search = qs.get("q", "").strip()
@@ -220,4 +254,4 @@ def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_co
         qty_min=html.escape(str(qty_min if qty_min else ""), quote=True),
         qty_max=html.escape(str(qty_max if qty_max else ""), quote=True),
     )
-    return wrap_page(content, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning)
+    return wrap_page(content, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, ext_ctx=ext_ctx)

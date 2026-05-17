@@ -14,7 +14,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from store import InventoryStore
-from render import load_templates, render_manage, render_settings, render_setup, escape, cents_from_scu
+from render import load_templates, render_manage, render_settings, render_setup, escape, cents_from_scu, ext_context
+from extensions import discover_extensions
 
 try:
     import rumps
@@ -124,6 +125,9 @@ store = InventoryStore(DATABASE)
 LOCAL_URL = ""
 NETWORK_URL = ""
 
+EXTENSIONS = []
+EXTENSION_CONTEXTS = {}
+
 
 class AppHandler(BaseHTTPRequestHandler):
     @staticmethod
@@ -174,6 +178,16 @@ class AppHandler(BaseHTTPRequestHandler):
         kind = qs.pop("kind", "success")
         prefs = self._parse_prefs(self.headers)
 
+        for ext in EXTENSIONS:
+            resp, handled = ext.on_route(path, qs, None, "GET")
+            if handled:
+                if isinstance(resp, tuple):
+                    body, _ = resp
+                    self.respond(body)
+                else:
+                    self.respond(resp)
+                return
+
         with store.connect() as db:
             missing = store.missing_tables(db)
             if missing:
@@ -182,12 +196,12 @@ class AppHandler(BaseHTTPRequestHandler):
                 return
 
             if path == "/" or path == "/manage":
-                body = render_manage(db, qs, store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING)
+                body = render_manage(db, qs, store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS)
                 self.respond(body)
                 return
 
             if path == "/settings":
-                body = render_settings(DATABASE, db=db, store=store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING)
+                body = render_settings(DATABASE, db=db, store=store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS)
                 self.respond(body)
                 return
 
@@ -204,6 +218,16 @@ class AppHandler(BaseHTTPRequestHandler):
         form = urllib.parse.parse_qs(self.rfile.read(length).decode("utf-8"))
         data = {key: values[0].strip() for key, values in form.items() if values}
 
+        for ext in EXTENSIONS:
+            resp, handled = ext.on_route(parsed.path, {}, data, "POST")
+            if handled:
+                if isinstance(resp, tuple):
+                    body, _ = resp
+                    self.respond(body)
+                else:
+                    self.respond(resp)
+                return
+
         if parsed.path == "/settings/save":
             self.settings_save(data)
             return
@@ -217,13 +241,22 @@ class AppHandler(BaseHTTPRequestHandler):
                 return
             try:
                 if parsed.path == "/manage/add":
+                    added_id = None
                     self.manage_add(db, data)
+                    for ext in EXTENSIONS:
+                        ext.on_inventory_add(db, added_id, data)
                     return
                 if parsed.path == "/manage/update":
+                    inv_id = data.get("inv_id", "")
                     self.manage_update(db, data)
+                    for ext in EXTENSIONS:
+                        ext.on_inventory_update(db, inv_id, data)
                     return
                 if parsed.path == "/manage/delete":
+                    inv_id = data.get("inv_id", "")
                     self.manage_delete(db, data)
+                    for ext in EXTENSIONS:
+                        ext.on_inventory_delete(db, inv_id)
                     return
                 if parsed.path == "/manage/add-item":
                     self.manage_add_item(db, data)
@@ -435,6 +468,19 @@ class AppHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     load_templates()
+
+    for ext in discover_extensions():
+        ext.on_startup(globals())
+        EXTENSIONS.append(ext)
+        print(f"  Extension: {ext.name} v{ext.version}")
+
+    def _refresh_ext_contexts():
+        for ext in EXTENSIONS:
+            ctx = ext.get_context()
+            ctx["_settings_html"] = ext.get_settings_html() if hasattr(ext, "get_settings_html") else ""
+            EXTENSION_CONTEXTS[ext.name] = ctx
+
+    _refresh_ext_contexts()
 
     existing_db = DATABASE.exists()
     if not existing_db and DATABASE == DEFAULT_DB:
