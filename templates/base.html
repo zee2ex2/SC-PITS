@@ -118,6 +118,83 @@
         var html = document.getElementById(id).innerHTML;
         openModal(title, html);
       }
+
+      var QTY_VALUES = (function() {
+        var vals = [0];
+        for (var v = 0.02; v <= 0.5; v = Math.round((v + 0.02) * 100) / 100) vals.push(v);
+        for (var v = 0.6; v <= 1.5; v = Math.round((v + 0.1) * 100) / 100) vals.push(v);
+        for (var v = 2; v <= 8; v = Math.round((v + 0.5) * 100) / 100) vals.push(v);
+        return vals;
+      })();
+
+      function showFilter(name) {
+        document.getElementById(name + "-overlay").style.display = "flex";
+      }
+
+      function hideFilter(name) {
+        document.getElementById(name + "-overlay").style.display = "none";
+      }
+
+      function syncQual(event) {
+        var el = event.target;
+        var overlay = el.closest(".modal-overlay") || document;
+        var minEl = overlay.querySelector("input[name='qual_min']");
+        var maxEl = overlay.querySelector("input[name='qual_max']");
+        if (!minEl || !maxEl) return;
+        var minVal = parseInt(minEl.value);
+        var maxVal = parseInt(maxEl.value);
+        if (minVal > maxVal) {
+          minEl.value = maxVal;
+          minVal = maxVal;
+        }
+        var track = overlay.querySelector(".dual-slider");
+        if (track) {
+          track.style.setProperty("--min-pct", (minVal / 10) + "%");
+          track.style.setProperty("--max-pct", (maxVal / 10) + "%");
+        }
+        overlay.querySelector("#qual-values").textContent = minVal + " \u2013 " + maxVal;
+      }
+
+      function syncQualFromStatic() {
+        var overlay = document.getElementById("filter-overlay");
+        if (!overlay) return;
+        var minEl = overlay.querySelector("input[name='qual_min']");
+        var maxEl = overlay.querySelector("input[name='qual_max']");
+        if (!minEl || !maxEl) return;
+        var minVal = parseInt(minEl.value);
+        var maxVal = parseInt(maxEl.value);
+        if (minVal > maxVal) { minEl.value = maxVal; minVal = maxVal; }
+        var track = overlay.querySelector(".dual-slider");
+        if (track) {
+          track.style.setProperty("--min-pct", (minVal / 10) + "%");
+          track.style.setProperty("--max-pct", (maxVal / 10) + "%");
+        }
+        overlay.querySelector("#qual-values").textContent = minVal + " \u2013 " + maxVal;
+      }
+
+      function updateQtyFilter(slider) {
+        var idx = parseInt(slider.value);
+        var scu = QTY_VALUES[idx];
+        document.getElementById("qty-min-cents").value = scu.toFixed(2);
+        var display = document.getElementById("qty-display");
+        display.textContent = (idx === QTY_VALUES.length - 1) ? "8+ SCU" : scu.toFixed(2) + " SCU";
+        var wrap = slider.closest(".qty-slider-wrap");
+        if (wrap) wrap.style.setProperty("--qty-pct", (idx / (QTY_VALUES.length - 1)) * 100 + "%");
+      }
+
+      function initQtyFilter(scuStr) {
+        var slider = document.getElementById("qty-slider");
+        if (!slider) return;
+        var scu = parseFloat(scuStr || 0);
+        var closest = 0;
+        for (var i = 0; i < QTY_VALUES.length; i++) {
+          if (Math.abs(QTY_VALUES[i] - scu) < Math.abs(QTY_VALUES[closest] - scu)) closest = i;
+        }
+        slider.value = closest;
+        var wrap = slider.closest(".qty-slider-wrap");
+        if (wrap) wrap.style.setProperty("--qty-pct", (closest / (QTY_VALUES.length - 1)) * 100 + "%");
+        updateQtyFilter(slider);
+      }
     </script>
   </head>
   <body>

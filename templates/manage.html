@@ -15,7 +15,7 @@
     </div>
     <div style="display:inline-block;position:relative">
       <label for="qual" style="display:block;font-size:11px;color:var(--muted);margin-bottom:2px">Quality</label>
-      <input name="qual" id="qual" type="number" min="0" max="100" value="100" required class="sm-input" style="width:80px">
+      <input name="qual" id="qual" type="number" min="0" max="1000" value="100" required class="sm-input" style="width:80px">
     </div>
     <div style="display:inline-block;position:relative">
       <label for="qty_scu" style="display:block;font-size:11px;color:var(--muted);margin-bottom:2px">QTY (SCU)</label>
@@ -27,33 +27,71 @@
 </section>
 
 <section class="panel">
-  <div class="section-heading"><h2>Inventory Rows</h2></div>
-  <div class="filters">
-    <form method="get" action="/manage" style="display:contents">
-      <div class="search-form" style="display:contents">
-        <div class="search-wrap">
+  <div class="section-heading">
+    <h2>Inventory Rows</h2>
+    <div class="filter-bar">
+      <form method="get" action="/manage" class="search-form">
+        <span class="search-wrap">
           <input type="search" name="q" placeholder="Search items..." value="{{search_query}}">
-        </div>
-        <div class="filter-group">
-          <label>Quality Range</label>
-          <div class="range-inputs">
-            <input type="number" name="qual_min" placeholder="Min" value="{{qual_min}}" min="0" max="100" style="width:70px">
-            <span class="range-sep">–</span>
-            <input type="number" name="qual_max" placeholder="Max" value="{{qual_max}}" min="0" max="100" style="width:70px">
-          </div>
-        </div>
-        <div class="filter-group">
-          <label>QTY Range (SCU)</label>
-          <div class="range-inputs">
-            <input type="number" name="qty_min" placeholder="Min" value="{{qty_min}}" min="0" step="0.01" style="width:80px">
-            <span class="range-sep">–</span>
-            <input type="number" name="qty_max" placeholder="Max" value="{{qty_max}}" min="0" step="0.01" style="width:80px">
-          </div>
-        </div>
-        <button type="submit">Filter</button>
-      </div>
-    </form>
+        </span>
+        <button class="icon-btn" type="submit" aria-label="Search" title="Search items">&#x1F50D;</button>
+        <input type="hidden" name="qual_min" value="{{qual_min}}">
+        <input type="hidden" name="qual_max" value="{{qual_max}}">
+        <input type="hidden" name="qty_min" value="{{qty_min}}">
+        <input type="hidden" name="qty_max" value="{{qty_max}}">
+      </form>
+      <button class="icon-btn" onclick="showFilter('filter')" aria-label="Filter" title="Filter">&#x2699;&#xFE0F;</button>
+    </div>
   </div>
+
+  <div id="filter-overlay" class="modal-overlay" style="display:none" onclick="if(event.target==this)hideFilter('filter')">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Filter Inventory</span>
+        <button class="modal-close" onclick="hideFilter('filter')">&times;</button>
+      </div>
+      <form method="get" action="/manage">
+        <input type="hidden" name="q" value="{{search_query}}">
+
+        <div class="filter-group">
+          <label>Quality</label>
+          <div class="dual-slider">
+            <div class="slider-track"></div>
+            <input type="range" class="slider-thumb" name="qual_min" min="0" max="1000" value="{{qual_min}}" oninput="syncQual(event)">
+            <input type="range" class="slider-thumb slider-max" name="qual_max" min="0" max="1000" value="{{qual_max}}" oninput="syncQual(event)">
+          </div>
+          <div class="slider-values" id="qual-values">{{qual_min}} &ndash; {{qual_max}}</div>
+        </div>
+
+        <div class="filter-group">
+          <label>Minimum QTY</label>
+          <div class="qty-slider-wrap">
+            <div class="slider-track"></div>
+            <input type="range" id="qty-slider" min="0" max="48" value="0" oninput="updateQtyFilter(this)">
+          </div>
+          <input type="hidden" name="qty_min" id="qty-min-cents" value="{{qty_min}}">
+          <div class="slider-values" id="qty-display">0.00 SCU</div>
+        </div>
+
+        <div class="filter-group">
+          <label>Max QTY (SCU)</label>
+          <input type="number" name="qty_max" placeholder="Max" value="{{qty_max}}" min="0" step="0.01" style="width:100%;margin-top:2px">
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:8px">
+          <button type="submit">Apply</button>
+          <a class="button ghost" href="/manage">Clear</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      initQtyFilter("{{qty_min}}" || "0");
+      syncQualFromStatic();
+    })();
+  </script>
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Item</th><th>Station</th><th>Qual</th><th>QTY</th><th>Actions</th></tr></thead>
