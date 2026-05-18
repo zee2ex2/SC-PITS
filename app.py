@@ -232,6 +232,14 @@ class AppHandler(BaseHTTPRequestHandler):
             self._settings_toggle_extension()
             return
 
+        if parsed.path == "/settings/install-extension":
+            self._settings_install_extension()
+            return
+
+        if parsed.path == "/settings/remove-extension":
+            self._settings_remove_extension()
+            return
+
         length = int(self.headers.get("Content-Length", "0"))
         form = urllib.parse.parse_qs(self.rfile.read(length).decode("utf-8"))
         data = {key: values[0].strip() for key, values in form.items() if values}
@@ -432,6 +440,101 @@ class AppHandler(BaseHTTPRequestHandler):
 
         _refresh_ext_contexts()
         self.respond_json({"success": True, "enabled": new_enabled})
+
+    def _settings_install_extension(self):
+        import base64, zipfile, tempfile, shutil
+        length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(length).decode("utf-8")
+        form = urllib.parse.parse_qs(body)
+        filename = form.get("filename", [""])[0]
+        filedata = form.get("filedata", [""])[0]
+        if not filename or not filedata:
+            self.respond_json({"error": "Missing file data"})
+            return
+        try:
+            file_bytes = base64.b64decode(filedata)
+        except Exception:
+            self.respond_json({"error": "Invalid file data"}, HTTPStatus.BAD_REQUEST)
+            return
+
+        ext_dir = BASE_DIR / "extensions"
+        ext_dir.mkdir(parents=True, exist_ok=True)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_zip = Path(tmpdir) / "upload.zip"
+            tmp_zip.write_bytes(file_bytes)
+
+            with zipfile.ZipFile(tmp_zip, 'r') as zf:
+                names = zf.namelist()
+                ext_subdirs = set()
+                for name in names:
+                    parts = name.split('/')
+                    if len(parts) >= 2 and parts[0] == 'extensions' and parts[1] and not name.endswith('/'):
+                        ext_subdirs.add(parts[1])
+
+                if not ext_subdirs:
+                    self.respond_json({"error": "No extension found. ZIP must contain extensions/<name>/__init__.py"})
+                    return
+
+                results = []
+                for ext_name in ext_subdirs:
+                    prefix = f"extensions/{ext_name}/"
+                    target = ext_dir / ext_name
+                    if target.exists():
+                        shutil.rmtree(target)
+                    for name in names:
+                        if name.startswith(prefix) and not name.endswith('/'):
+                            rel = name[len(prefix):]
+                            dest = target / rel
+                            dest.parent.mkdir(parents=True, exist_ok=True)
+                            dest.write_bytes(zf.read(name))
+
+                    init_file = target / "__init__.py"
+                    if not init_file.exists():
+                        shutil.rmtree(target)
+                        self.respond_json({"error": f"Missing __init__.py in {ext_name}"})
+                        return
+
+                    try:
+                        import importlib.util
+                        spec = importlib.util.spec_from_file_location(f"extensions.{ext_name}", init_file)
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        found = None
+                        for attr_name in dir(mod):
+                            attr = getattr(mod, attr_name)
+                            if isinstance(attr, type) and issubclass(attr, Extension) and attr is not Extension:
+                                inst = attr()
+                                found = {"ext_name": ext_name, "name": inst.name, "version": inst.version}
+                                results.append(found)
+                                break
+                        if not found:
+                            shutil.rmtree(target)
+                            self.respond_json({"error": f"No Extension subclass in {ext_name}"})
+                            return
+                    except Exception as e:
+                        shutil.rmtree(target)
+                        self.respond_json({"error": f"Failed to load {ext_name}: {e}"})
+                        return
+
+        self.respond_json({"success": True, "name": results[0]["name"], "version": results[0]["version"]})
+
+    def _settings_remove_extension(self):
+        length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(length).decode("utf-8")
+        form = urllib.parse.parse_qs(body)
+        ext_name = form.get("name", [""])[0]
+        if not ext_name:
+            self.respond_json({"error": "Missing extension name"})
+            return
+        target = BASE_DIR / "extensions" / ext_name
+        if target.exists():
+            shutil.rmtree(target)
+        cfg = load_config()
+        exts_cfg = cfg.get("extensions", {})
+        exts_cfg.pop(ext_name, None)
+        save_config({"extensions": exts_cfg})
+        self.respond_json({"success": True})
 
     def settings_save(self, data):
         global DATABASE, db_path, DB_COMPAT_WARNING
