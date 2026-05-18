@@ -497,6 +497,12 @@ class AppHandler(BaseHTTPRequestHandler):
 
                     try:
                         import importlib.util
+                        import sys
+                        ext_dir_str = str(ext_dir.resolve())
+                        if ext_dir_str not in sys.path:
+                            sys.path.insert(0, ext_dir_str)
+                        if "extensions" not in sys.modules:
+                            import extensions
                         spec = importlib.util.spec_from_file_location(f"extensions.{ext_name}", init_file)
                         mod = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(mod)

@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_submodules
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('templates', 'templates'), ('static', 'static'), ('extensions', 'extensions'), ('icon_PITS.icns', '.')]
+datas = [('templates', 'templates'), ('static', 'static'), ('extensions', 'extensions'), ('icon_PITS.icns', '.'), ('icon_PITS.png', '.'), ('icon_PITS.ico', '.')]
 binaries = []
 hiddenimports = ['extensions', 'websocket']
 hiddenimports += collect_submodules('extensions')
