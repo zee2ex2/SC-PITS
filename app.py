@@ -512,6 +512,12 @@ class AppHandler(BaseHTTPRequestHandler):
                                 inst = attr()
                                 found = {"ext_name": ext_name, "name": inst.name, "version": inst.version}
                                 results.append(found)
+                                inst.on_startup(globals())
+                                EXTENSIONS.append(inst)
+                                ctx = inst.get_context()
+                                if hasattr(inst, "get_settings_html"):
+                                    ctx["_settings_html"] = inst.get_settings_html()
+                                EXTENSION_CONTEXTS[ext_name] = ctx
                                 break
                         if not found:
                             shutil.rmtree(target)
@@ -522,6 +528,7 @@ class AppHandler(BaseHTTPRequestHandler):
                         self.respond_json({"error": f"Failed to load {ext_name}: {e}"})
                         return
 
+        _refresh_ext_contexts()
         self.respond_json({"success": True, "name": results[0]["name"], "version": results[0]["version"]})
 
     def _settings_remove_extension(self):

@@ -103,7 +103,8 @@ document.getElementById('extZipPicker').addEventListener('change', function(e) {
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (d.success) {
-          status.innerHTML = '<span style="color:var(--accent)">Installed ' + d.name + ' v' + d.version + '. Restarting...</span>';
+          status.innerHTML = '<span style="color:var(--accent)">Installed ' + d.name + ' v' + d.version + '.</span>';
+          window.location.href = '/settings?expand=' + d.name.replace('_', ' ');
         } else {
           status.innerHTML = '<span style="color:var(--danger)">Failed: ' + d.error + '</span>';
         }

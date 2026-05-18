@@ -186,8 +186,8 @@ def render_settings(db_path, db=None, store=None, prefs=None, local_url="", netw
                 status, status_cls = "Disabled", "error"
             toggle_cls = "ok" if ex["enabled"] else "hold"
             toggle_label = "Enabled" if ex["enabled"] else "Disabled"
-            expand_flag = "jock" if is_jock and not ex["enabled"] else ""
-            confirm_msg = "Disable JOCK Strap?" if is_jock and ex["enabled"] else ""
+            expand_flag = ex['name'].replace('_', ' ') if not ex["enabled"] else ""
+            confirm_msg = "Disable this extension?" if ex["enabled"] else ""
             toggle_html = f"""<form method="post" action="/settings/toggle-extension" style="display:inline" class="ext-toggle" data-name="{escape(ex['name'])}" data-expand="{expand_flag}" data-confirm="{confirm_msg}">
             <input type="hidden" name="name" value="{escape(ex['name'])}">
             <label class="toggle-switch">
