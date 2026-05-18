@@ -55,6 +55,7 @@ PORT_ENV = os.environ.get("PORT")
 
 def is_port_available(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             s.bind(("", port))
             return True
@@ -172,6 +173,10 @@ class AppHandler(BaseHTTPRequestHandler):
             self.serve_static(BASE_DIR / "static" / "styles.css", "text/css; charset=utf-8")
             return
 
+        if path == "/static/pits.js":
+            self.serve_static(BASE_DIR / "static" / "pits.js", "application/javascript; charset=utf-8")
+            return
+
         raw = urllib.parse.parse_qs(parsed.query)
         qs = {k: v[0] for k, v in raw.items() if v[0]}
         notice = qs.pop("notice", "")
@@ -202,7 +207,15 @@ class AppHandler(BaseHTTPRequestHandler):
                 return
 
             if path == "/settings":
-                body = render_settings(DATABASE, db=db, store=store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS)
+                ext_list = []
+                cfg = load_config()
+                exts_cfg = cfg.get("extensions", {})
+                for ext in discover_extensions():
+                    enabled = exts_cfg.get(ext.name, {}).get("enabled", True)
+                    ctx = EXTENSION_CONTEXTS.get(ext.name, {})
+                    connected = ctx.get("ext_jock_connected", "false") == "true"
+                    ext_list.append({"name": ext.name, "version": ext.version, "enabled": enabled, "connected": connected})
+                body = render_settings(DATABASE, db=db, store=store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS, extensions_list=ext_list)
                 self.respond(body)
                 return
 
@@ -213,6 +226,10 @@ class AppHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/settings/upload-db":
             self._settings_upload_db()
+            return
+
+        if parsed.path == "/settings/toggle-extension":
+            self._settings_toggle_extension()
             return
 
         length = int(self.headers.get("Content-Length", "0"))
@@ -377,6 +394,45 @@ class AppHandler(BaseHTTPRequestHandler):
         self._refresh_compat_warning()
         self.respond_json({"success": True, "path": str(save_path)})
 
+    def _settings_toggle_extension(self):
+        length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(length).decode("utf-8")
+        form = urllib.parse.parse_qs(body)
+        ext_name = form.get("name", [""])[0]
+        if not ext_name:
+            self.respond_json({"error": "Missing extension name"})
+            return
+        cfg = load_config()
+        exts_cfg = cfg.get("extensions", {})
+        current = exts_cfg.get(ext_name, {}).get("enabled", True)
+        if ext_name not in exts_cfg:
+            exts_cfg[ext_name] = {}
+        exts_cfg[ext_name]["enabled"] = not current
+        save_config({"extensions": exts_cfg})
+        new_enabled = not current
+
+        if new_enabled:
+            for ext_candidate in discover_extensions():
+                if ext_candidate.name == ext_name:
+                    ext_candidate.on_startup(globals())
+                    EXTENSIONS.append(ext_candidate)
+                    ctx = ext_candidate.get_context()
+                    if hasattr(ext_candidate, "get_settings_html"):
+                        ctx["_settings_html"] = ext_candidate.get_settings_html()
+                    EXTENSION_CONTEXTS[ext_name] = ctx
+                    break
+        else:
+            for i, ext in enumerate(EXTENSIONS):
+                if ext.name == ext_name:
+                    if hasattr(ext, "_ws_close"):
+                        ext._ws_close()
+                    del EXTENSIONS[i]
+                    break
+            EXTENSION_CONTEXTS.pop(ext_name, None)
+
+        _refresh_ext_contexts()
+        self.respond_json({"success": True, "enabled": new_enabled})
+
     def settings_save(self, data):
         global DATABASE, db_path, DB_COMPAT_WARNING
         new_path = data.get("db_path", "").strip()
@@ -471,7 +527,24 @@ class AppHandler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     load_templates()
 
+    if PORT_ENV:
+        PORT = int(PORT_ENV)
+    else:
+        PORT = find_port(preferred=config.get("port"))
+        if config.get("port") != PORT:
+            save_config({"port": PORT})
+
+    local_ip = get_local_ip()
+    LOCAL_URL = f"http://localhost:{PORT}"
+    NETWORK_URL = f"http://{local_ip}:{PORT}"
+
     for ext in discover_extensions():
+        cfg_exts = load_config().get("extensions", {})
+        ext_cfg = cfg_exts.get(ext.name, {})
+        if not ext_cfg.get("enabled", True):
+            print(f"  Extension: {ext.name} v{ext.version} (disabled)")
+            EXTENSION_CONTEXTS[ext.name] = {}
+            continue
         ext.on_startup(globals())
         EXTENSIONS.append(ext)
         print(f"  Extension: {ext.name} v{ext.version}")
@@ -502,22 +575,12 @@ if __name__ == "__main__":
     with store.connect() as db:
         store.create_tables(db)
 
-    if PORT_ENV:
-        PORT = int(PORT_ENV)
-    else:
-        PORT = find_port(preferred=config.get("port"))
-        if config.get("port") != PORT:
-            save_config({"port": PORT})
-
-    local_ip = get_local_ip()
-    LOCAL_URL = f"http://localhost:{PORT}"
-    NETWORK_URL = f"http://{local_ip}:{PORT}"
     print(f"Personal Inventory Tracker")
     print(f"  Local:    {LOCAL_URL}")
     print(f"  Network:  {NETWORK_URL}")
     print(f"  Database: {DATABASE}")
-    webbrowser.open(LOCAL_URL)
 
+    ThreadingHTTPServer.allow_reuse_address = True
     server = ThreadingHTTPServer((HOST, PORT), AppHandler)
 
     if rumps and sys.platform == "darwin":

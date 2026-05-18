@@ -109,18 +109,22 @@ def ext_context(extensions_ctx=None):
     styles = ""
     scripts = ""
     nav_items = ""
+    title_suffix = ""
     ext_data = {}
     if extensions_ctx:
         for ext_name, ctx in extensions_ctx.items():
             for k, v in ctx.items():
                 if k == "_nav_html":
                     nav_items += str(v)
+                elif k == "_title_suffix":
+                    title_suffix += str(v)
                 elif not k.startswith("_"):
                     ext_data[k] = v
     return {
         "ext_styles": styles,
         "ext_scripts": scripts,
         "ext_nav_items": nav_items,
+        "ext_title_suffix": title_suffix,
         "ext_data": ext_data,
         "ext_data_json": json.dumps(ext_data, ensure_ascii=False),
     }
@@ -136,7 +140,7 @@ def wrap_page(content, notice="", kind="success", prefs=None, local_url="", netw
     ctx = {"notice_html": notice_html, "content": content,
            "theme_class": theme_class, "local_url": escape(local_url),
            "network_url": escape(network_url)}
-    if ext_ctx:
+    if ext_ctx is not None:
         ec = ext_context(ext_ctx)
         ctx.update(ec)
     return render_template("base", **ctx)
@@ -148,7 +152,7 @@ def render_setup(missing, local_url="", network_url="", db_compat_warning=None):
     return wrap_page(content, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning)
 
 
-def render_settings(db_path, db=None, store=None, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None):
+def render_settings(db_path, db=None, store=None, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, extensions_list=None):
     system_select = ""
     schema_version = ""
     ext_settings_html = ""
@@ -163,7 +167,37 @@ def render_settings(db_path, db=None, store=None, prefs=None, local_url="", netw
             if html:
                 sections.append(html)
         ext_settings_html = "\n".join(sections)
-    content = render_template("settings", db_path=escape(str(db_path)), system_select=system_select, schema_version=escape(schema_version), ext_settings=ext_settings_html)
+    exts_rows = ""
+    if extensions_list:
+        for ex in extensions_list:
+            is_jock = ex['name'] == 'jock_strap'
+            ctx = (ext_ctx or {}).get(ex['name'], {})
+            ext_status = ctx.get("ext_status", "")
+            ext_status_cls = ctx.get("ext_status_cls", "")
+            if ex["enabled"]:
+                if ext_status:
+                    status, status_cls = ext_status, ext_status_cls
+                elif is_jock:
+                    status = "Connected" if ex['connected'] else "Disconnected"
+                    status_cls = "ok" if ex['connected'] else "error"
+                else:
+                    status, status_cls = "Enabled", "ok"
+            else:
+                status, status_cls = "Disabled", "error"
+            toggle_cls = "ok" if ex["enabled"] else "hold"
+            toggle_label = "Enabled" if ex["enabled"] else "Disabled"
+            expand_flag = "jock" if is_jock and not ex["enabled"] else ""
+            confirm_msg = "Disable JOCK Strap?" if is_jock and ex["enabled"] else ""
+            toggle_html = f"""<form method="post" action="/settings/toggle-extension" style="display:inline" class="ext-toggle" data-name="{escape(ex['name'])}" data-expand="{expand_flag}" data-confirm="{confirm_msg}">
+            <input type="hidden" name="name" value="{escape(ex['name'])}">
+            <label class="toggle-switch">
+                <input type="checkbox" {'checked' if ex['enabled'] else ''} aria-label="{toggle_label}">
+                <span class="toggle-slider"></span>
+            </label></form>"""
+            exts_rows += f"<tr><td>{escape(ex['name'])}</td><td>{escape(ex['version'])}</td><td><span class='pill {status_cls}'>{status}</span></td><td class='cell-actions'>{toggle_html}</td></tr>"
+    if not exts_rows:
+        exts_rows = '<tr><td colspan="4" class="empty">No extensions installed.</td></tr>'
+    content = render_template("settings", db_path=escape(str(db_path)), system_select=system_select, schema_version=escape(schema_version), ext_settings=ext_settings_html, installed_extensions=exts_rows)
     return wrap_page(content, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, ext_ctx=ext_ctx)
 
 
@@ -227,7 +261,7 @@ def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_co
             f"<td>{escape(r['qual'])}</td>"
             f"<td>{scu_from_cents(r['qty'])}</td>"
             f'<td class="cell-actions">'
-            f'<button class="action-btn" data-modal="{eid}" onclick="openModalFrom(this,\'Edit Inventory Row #{r["id"]}\')">Edit</button>'
+            f'<button class="action-btn button blue" style="border:none" data-modal="{eid}" onclick="openModalFrom(this,\'Edit Inventory Row #{r["id"]}\')">Edit</button>'
             f'<div id="{eid}" style="display:none">{form_html}</div>'
             f'<form action="/manage/delete" method="post" onsubmit="return confirm(\'Delete inventory row #{r["id"]}?\')">'
             f'<input type="hidden" name="inv_id" value="{r["id"]}">'

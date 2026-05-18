@@ -22,7 +22,7 @@ class Extension:
     def on_inventory_update(self, db, inv_id, data):
         pass
 
-    def on_inventory_delete(self, db, inv_id):
+    def on_inventory_delete(self, db, inv_id, item_data=None):
         pass
 
     def get_context(self):

@@ -3,211 +3,22 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Personal Inventory</title>
+    <title>P.I.T.S.</title>
     <link rel="icon" type="image/png" href="/favicon">
-    <link rel="stylesheet" href="/static/styles.css">{{ext_styles}}
+    <link rel="stylesheet" href="/static/styles.css?v=2">{{ext_styles}}
     <script>window.EXT_DATA = {{ext_data_json}};</script>
-    <script>
-      (function () {
-        var theme = localStorage.getItem("theme");
-        if (theme) {
-          document.documentElement.className = theme;
-          document.cookie = "pref_theme=" + theme + "; SameSite=Lax; Path=/; Max-Age=" + (86400 * 365);
-        }
-      })();
-      function setCookie(name, value, days) {
-        document.cookie = name + "=" + value + "; SameSite=Lax; Path=/; Max-Age=" + (days * 86400);
-      }
-      function toggleTheme() {
-        var html = document.documentElement;
-        var theme = html.className === "light" ? "dark" : "light";
-        html.className = theme;
-        localStorage.setItem("theme", theme);
-        setCookie("pref_theme", theme, 365);
-      }
-      function changePerPage(sel) {
-        var n = sel.options[sel.selectedIndex].text.split(" ")[0];
-        if (n) setCookie("pref_per_page", n, 365);
-        location.href = sel.value;
-      }
-      function itemAutocomplete(input) {
-        document.getElementById("item-id").value = "";
-        var val = input.value.trim().toLowerCase();
-        var container = document.getElementById("item-suggestions");
-        if (!container || val.length === 0) {
-          if (container) container.style.display = "none";
-          return;
-        }
-        var matches = (window.ADD_ITEMS || []).filter(function(item) {
-          return item.name.toLowerCase().indexOf(val) === 0;
-        }).slice(0, 5);
-        container.innerHTML = "";
-        if (matches.length === 0) {
-          container.style.display = "none";
-          return;
-        }
-        matches.forEach(function(item) {
-          var div = document.createElement("div");
-          div.className = "suggestion-item";
-          div.textContent = item.name;
-          div.addEventListener("click", function() {
-            input.value = item.name;
-            document.getElementById("item-id").value = item.id;
-            container.style.display = "none";
-          });
-          container.appendChild(div);
-        });
-        container.style.display = "block";
-      }
-      function stationAutocomplete(input) {
-        var wrap = input.closest(".autocomplete-wrap");
-        if (!wrap) return;
-        var hidden = wrap.querySelector(".station-id");
-        if (hidden) hidden.value = "";
-        var container = wrap.querySelector(".search-suggestions");
-        if (!container || input.value.trim().length === 0) {
-          if (container) container.style.display = "none";
-          return;
-        }
-        var val = input.value.trim().toLowerCase();
-        var matches = (window.ADD_STATIONS || []).filter(function(s) {
-          return s.name.toLowerCase().indexOf(val) === 0;
-        }).slice(0, 5);
-        container.innerHTML = "";
-        if (matches.length === 0) {
-          container.style.display = "none";
-          return;
-        }
-        matches.forEach(function(s) {
-          var div = document.createElement("div");
-          div.className = "suggestion-item";
-          div.textContent = s.name;
-          div.addEventListener("click", function() {
-            input.value = s.name;
-            if (hidden) hidden.value = s.id;
-            container.style.display = "none";
-          });
-          container.appendChild(div);
-        });
-        container.style.display = "block";
-      }
-      document.addEventListener("click", function (event) {
-        if (event.target.closest(".autocomplete-wrap")) return;
-        document.querySelectorAll(".search-suggestions").forEach(function(c) {
-          c.style.display = "none";
-        });
-      });
-      window.addEventListener("submit", function (event) {
-        if (event.defaultPrevented) return;
-        var buttons = event.target.querySelectorAll("button");
-        buttons.forEach(function (button) {
-          button.disabled = true;
-          button.dataset.originalText = button.textContent;
-          button.textContent = "Working";
-        });
-      });
-      function openModal(title, formHtml) {
-        document.getElementById("modal-title").textContent = title;
-        document.getElementById("modal-body").innerHTML = formHtml;
-        document.getElementById("modal").style.display = "flex";
-      }
-      function closeModal() {
-        document.getElementById("modal").style.display = "none";
-      }
-      function openModalFrom(btn, title) {
-        var id = btn.getAttribute("data-modal");
-        var html = document.getElementById(id).innerHTML;
-        openModal(title, html);
-      }
-
-      var QTY_VALUES = (function() {
-        var vals = [0];
-        for (var v = 0.02; v <= 0.5; v = Math.round((v + 0.02) * 100) / 100) vals.push(v);
-        for (var v = 0.6; v <= 1.5; v = Math.round((v + 0.1) * 100) / 100) vals.push(v);
-        for (var v = 2; v <= 8; v = Math.round((v + 0.5) * 100) / 100) vals.push(v);
-        return vals;
-      })();
-
-      function showFilter(name) {
-        document.getElementById(name + "-overlay").style.display = "flex";
-      }
-
-      function hideFilter(name) {
-        document.getElementById(name + "-overlay").style.display = "none";
-      }
-
-      function syncQual(event) {
-        var el = event.target;
-        var overlay = el.closest(".modal-overlay") || document;
-        var minEl = overlay.querySelector("input[name='qual_min']");
-        var maxEl = overlay.querySelector("input[name='qual_max']");
-        if (!minEl || !maxEl) return;
-        var minVal = parseInt(minEl.value);
-        var maxVal = parseInt(maxEl.value);
-        if (minVal > maxVal) {
-          minEl.value = maxVal;
-          minVal = maxVal;
-        }
-        var track = overlay.querySelector(".dual-slider");
-        if (track) {
-          track.style.setProperty("--min-pct", (minVal / 10) + "%");
-          track.style.setProperty("--max-pct", (maxVal / 10) + "%");
-        }
-        overlay.querySelector("#qual-values").textContent = minVal + " \u2013 " + maxVal;
-      }
-
-      function syncQualFromStatic() {
-        var overlay = document.getElementById("filter-overlay");
-        if (!overlay) return;
-        var minEl = overlay.querySelector("input[name='qual_min']");
-        var maxEl = overlay.querySelector("input[name='qual_max']");
-        if (!minEl || !maxEl) return;
-        var minVal = parseInt(minEl.value);
-        var maxVal = parseInt(maxEl.value);
-        if (minVal > maxVal) { minEl.value = maxVal; minVal = maxVal; }
-        var track = overlay.querySelector(".dual-slider");
-        if (track) {
-          track.style.setProperty("--min-pct", (minVal / 10) + "%");
-          track.style.setProperty("--max-pct", (maxVal / 10) + "%");
-        }
-        overlay.querySelector("#qual-values").textContent = minVal + " \u2013 " + maxVal;
-      }
-
-      function updateQtyFilter(slider) {
-        var idx = parseInt(slider.value);
-        var scu = QTY_VALUES[idx];
-        document.getElementById("qty-min-cents").value = scu.toFixed(2);
-        var display = document.getElementById("qty-display");
-        display.textContent = (idx === QTY_VALUES.length - 1) ? "8+ SCU" : scu.toFixed(2) + " SCU";
-        var wrap = slider.closest(".qty-slider-wrap");
-        if (wrap) wrap.style.setProperty("--qty-pct", (idx / (QTY_VALUES.length - 1)) * 100 + "%");
-      }
-
-      function initQtyFilter(scuStr) {
-        var slider = document.getElementById("qty-slider");
-        if (!slider) return;
-        var scu = parseFloat(scuStr || 0);
-        var closest = 0;
-        for (var i = 0; i < QTY_VALUES.length; i++) {
-          if (Math.abs(QTY_VALUES[i] - scu) < Math.abs(QTY_VALUES[closest] - scu)) closest = i;
-        }
-        slider.value = closest;
-        var wrap = slider.closest(".qty-slider-wrap");
-        if (wrap) wrap.style.setProperty("--qty-pct", (closest / (QTY_VALUES.length - 1)) * 100 + "%");
-        updateQtyFilter(slider);
-      }
-    </script>
+    <script src="/static/pits.js?v=2"></script>
   </head>
   <body>
     <header class="topbar">
       <div>
-        <h1>Personal Inventory</h1>
-        <p class="network-info">{{local_url}} &middot; {{network_url}}</p>
+        <h1>P.I.T.S.{{ext_title_suffix}}</h1>
+        <p class="network-info">{{network_url}}</p>
       </div>
       <nav class="nav-links">
         <a class="button ghost" href="/manage">Inventory</a>
-        <a class="button ghost" href="/settings">Settings</a>
         {{ext_nav_items}}
+        <a class="button ghost" href="/settings" aria-label="Settings" title="Settings">&#x2699;&#xFE0F;</a>
         <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">&#x263E;</button>
       </nav>
     </header>
@@ -221,5 +32,9 @@
         <div id="modal-body"></div>
       </div>
     </div>
+    <footer class="footer">
+      <span>Personal Inventory Tracker System</span>
+      <span>v0.3.0 &middot; 2956-05-17</span>
+    </footer>
   </body>
 </html>

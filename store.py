@@ -152,8 +152,23 @@ class InventoryStore:
         ).fetchall()
         return rows, total
 
-    def add_item(self, db, name, catid):
-        db.execute("INSERT INTO item (name, catid) VALUES (?, ?)", (name, int(catid) if catid else None))
+    def add_item(self, db, name, catid, item_id=None):
+        if item_id:
+            db.execute("INSERT INTO item (id, name, catid) VALUES (?, ?, ?)", (int(item_id), name, int(catid) if catid else None))
+        else:
+            db.execute("INSERT INTO item (name, catid) VALUES (?, ?)", (name, int(catid) if catid else None))
+        db.commit()
+
+    def update_item(self, db, item_id, name, catid):
+        pass
+
+    def add_station(self, db, name, code, systemid, station_id=None):
+        if station_id:
+            db.execute("INSERT INTO stations (id, name, code, systemid) VALUES (?, ?, ?, ?)",
+                       (int(station_id), name, code, int(systemid) if systemid else None))
+        else:
+            db.execute("INSERT INTO stations (name, code, systemid) VALUES (?, ?, ?)",
+                       (name, code, int(systemid) if systemid else None))
         db.commit()
 
     def update_item(self, db, item_id, name, catid):
@@ -258,10 +273,17 @@ class InventoryStore:
         return rows, total
 
     def add_inventory(self, db, itemid, qual, qty, stationid):
-        db.execute(
-            "INSERT INTO inventory (itemid, qual, qty, stationid) VALUES (?, ?, ?, ?)",
-            (int(itemid), int(qual), int(qty), int(stationid) if stationid else None),
-        )
+        existing = db.execute(
+            "SELECT id, qty FROM inventory WHERE itemid=? AND qual=? AND stationid IS ?",
+            (int(itemid), int(qual), int(stationid) if stationid else None)
+        ).fetchone()
+        if existing:
+            db.execute("UPDATE inventory SET qty=qty+? WHERE id=?", (int(qty), existing["id"]))
+        else:
+            db.execute(
+                "INSERT INTO inventory (itemid, qual, qty, stationid) VALUES (?, ?, ?, ?)",
+                (int(itemid), int(qual), int(qty), int(stationid) if stationid else None),
+            )
         db.commit()
 
     def update_inventory(self, db, inv_id, itemid, qual, qty, stationid):

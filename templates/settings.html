@@ -1,68 +1,130 @@
 <section class="panel">
-  <div class="section-heading"><h2>Database Settings</h2></div>
-  <p class="subtle" style="margin-bottom:12px">Schema version: <code>{{schema_version}}</code></p>
-  <form action="/settings/save" method="post" class="inline-form" style="flex-wrap:wrap;gap:10px">
-    <label style="flex:1;min-width:300px">
-      <span style="display:block;margin-bottom:4px;font-size:13px;color:var(--muted)">Database file path</span>
-      <div style="display:flex;gap:6px">
-        <input type="text" name="db_path" value="{{db_path}}" required style="flex:1;box-sizing:border-box;font-family:monospace">
-        <button type="button" onclick="document.getElementById('dbFilePicker').click()" style="white-space:nowrap">Browse...</button>
-      </div>
-    </label>
-    <button type="submit" style="align-self:flex-end">Save &amp; Reload</button>
-  </form>
-  <p class="subtle">Enter the path manually, or click Browse to pick a .db file from your computer &mdash; it will be copied into the app's <code>dbs/</code> folder and activated automatically.</p>
-  <input type="file" id="dbFilePicker" accept=".db,.sqlite" style="display:none">
+  <div class="section-heading" onclick="toggleSection(this)" style="cursor:pointer">
+    <h2>Database <span class="collapse-arrow" style="font-size:12px;margin-left:6px;color:var(--muted)">&#9654;</span></h2>
+  </div>
+  <div class="collapse-content" style="display:none">
+    <div class="section-heading"><h3 style="font-size:15px">Database Settings</h3></div>
+    <p class="subtle" style="margin-bottom:12px">Schema version: <code>{{schema_version}}</code></p>
+    <form action="/settings/save" method="post" class="inline-form" style="flex-wrap:wrap;gap:10px">
+      <label style="flex:1;min-width:300px">
+        <span style="display:block;margin-bottom:4px;font-size:13px;color:var(--muted)">Database file path</span>
+        <div style="display:flex;gap:6px">
+          <input type="text" name="db_path" value="{{db_path}}" required style="flex:1;box-sizing:border-box;font-family:monospace">
+          <button type="button" onclick="document.getElementById('dbFilePicker').click()" style="white-space:nowrap">Browse...</button>
+        </div>
+      </label>
+      <button type="submit" style="align-self:flex-end">Save &amp; Reload</button>
+    </form>
+    <p class="subtle">Enter the path manually, or click Browse to pick a .db file from your computer &mdash; it will be copied into the app's <code>dbs/</code> folder and activated automatically.</p>
+    <input type="file" id="dbFilePicker" accept=".db,.sqlite" style="display:none">
+
+    <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+
+    <div class="section-heading"><h3 style="font-size:15px">Create New Database</h3></div>
+    <p>Create a fresh personal inventory database at one of these locations.</p>
+    <div style="margin:16px 0;padding:14px;background:rgba(128,128,128,0.06);border:1px solid var(--border);border-radius:6px">
+      <div style="font-weight:600;margin-bottom:8px;font-size:14px">Quick create &mdash; in app folder</div>
+      <form action="/settings/create" method="post" class="inline-form" style="flex-wrap:wrap;gap:10px;margin:0">
+        <input type="text" name="db_name" placeholder="my_inventory.db" required class="sm-input" style="width:240px;font-family:monospace">
+        <button type="submit">Create &amp; Switch</button>
+      </form>
+      <p class="subtle" style="margin:6px 0 0">Creates the database in the app's <code>dbs/</code> folder. Just pick a name.</p>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+    <div style="font-weight:600;margin-bottom:8px;font-size:14px;color:var(--muted)">Custom path</div>
+    <form action="/settings/create" method="post" class="inline-form" style="flex-wrap:wrap;gap:10px">
+      <label style="flex:1;min-width:300px">
+        <span style="display:block;margin-bottom:4px;font-size:13px;color:var(--muted)">Full path to new database file</span>
+        <input type="text" name="db_path" placeholder="/path/to/my_inventory.db" required style="width:100%;box-sizing:border-box;font-family:monospace">
+      </label>
+      <button type="submit" style="align-self:flex-end">Create &amp; Switch</button>
+    </form>
+    <p class="subtle">Specify the exact filesystem path where the new database should be created.</p>
+  </div>
 </section>
 
 <section class="panel">
-  <div class="section-heading"><h2>Create New Database</h2></div>
-  <p>Create a fresh personal inventory database at one of these locations.</p>
-
-  <div style="margin:16px 0;padding:14px;background:rgba(128,128,128,0.06);border:1px solid var(--border);border-radius:6px">
-    <div style="font-weight:600;margin-bottom:8px;font-size:14px">Quick create &mdash; in app folder</div>
-    <form action="/settings/create" method="post" class="inline-form" style="flex-wrap:wrap;gap:10px;margin:0">
-      <input type="text" name="db_name" placeholder="my_inventory.db" required class="sm-input" style="width:240px;font-family:monospace">
-      <button type="submit">Create &amp; Switch</button>
-    </form>
-    <p class="subtle" style="margin:6px 0 0">Creates the database in the app's <code>dbs/</code> folder. Just pick a name.</p>
+  <div class="section-heading" onclick="toggleSection(this)" style="cursor:pointer">
+    <h2>Custom Fields <span class="collapse-arrow" style="font-size:12px;margin-left:6px;color:var(--muted)">&#9654;</span></h2>
   </div>
-
-  <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-
-  <div style="font-weight:600;margin-bottom:8px;font-size:14px;color:var(--muted)">Custom path</div>
-  <form action="/settings/create" method="post" class="inline-form" style="flex-wrap:wrap;gap:10px">
-    <label style="flex:1;min-width:300px">
-      <span style="display:block;margin-bottom:4px;font-size:13px;color:var(--muted)">Full path to new database file</span>
-      <input type="text" name="db_path" placeholder="/path/to/my_inventory.db" required style="width:100%;box-sizing:border-box;font-family:monospace">
-    </label>
-    <button type="submit" style="align-self:flex-end">Create &amp; Switch</button>
-  </form>
-  <p class="subtle">Specify the exact filesystem path where the new database should be created.</p>
+  <div class="collapse-content" style="display:none">
+    <p class="subtle" style="color:var(--warning);margin-bottom:12px;font-size:13px">&#x26A0; Custom fields will not sync if they don't exist on ShoWER</p>
+    <div class="section-heading"><h3 style="font-size:15px">Add Item</h3></div>
+    <form action="/manage/add-item" method="post" class="inline-form">
+      <input name="item_id" type="number" placeholder="ID" required class="sm-input" style="width:60px" min="1">
+      <input name="name" placeholder="Item name" required class="sm-input" style="width:180px">
+      <input name="catid" type="number" min="0" value="1" aria-label="Category ID" required class="sm-input">
+      <button type="submit" class="button green">Add Item</button>
+    </form>
+    <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+    <div class="section-heading"><h3 style="font-size:15px">Add Station</h3></div>
+    <form action="/manage/add-station" method="post" class="inline-form">
+      <input name="station_id" type="number" placeholder="ID" required class="sm-input" style="width:60px" min="1">
+      <input name="name" placeholder="Station name" required class="sm-input" style="width:200px">
+      <input name="code" placeholder="Code" required class="sm-input" style="width:120px">
+      {{system_select}}
+      <button type="submit" class="button green">Add Station</button>
+    </form>
+  </div>
 </section>
 
-<section class="panel add-panel">
-  <h2>Add Item</h2>
-  <form action="/manage/add-item" method="post" class="inline-form">
-    <input name="name" placeholder="Item name" required class="sm-input" style="width:180px">
-    <input name="catid" type="number" min="0" value="1" aria-label="Category ID" required class="sm-input">
-    <button type="submit">Add Item</button>
-  </form>
-</section>
-
-<section class="panel add-panel">
-  <h2>Add Station</h2>
-  <form action="/manage/add-station" method="post" class="inline-form">
-    <input name="name" placeholder="Station name" required class="sm-input" style="width:200px">
-    <input name="code" placeholder="Code" required class="sm-input" style="width:120px">
-    {{system_select}}
-    <button type="submit">Add Station</button>
-  </form>
+<section class="panel">
+  <div class="section-heading"><h2>Manage Extensions</h2></div>
+  <table class="item-table" style="margin-bottom:16px">
+    <thead><tr><th>Extension</th><th>Version</th><th>Status</th><th class="cell-actions" style="min-width:0">Enable</th></tr></thead>
+    <tbody>{{installed_extensions}}</tbody>
+  </table>
+  <div style="border-top:1px solid var(--line);padding-top:16px">
+    <div class="section-heading"><h3 style="font-size:15px">Install New Extension</h3></div>
+    <div style="margin-top:12px">
+      <input type="file" id="extZipPicker" accept=".zip" style="display:none">
+      <button type="button" onclick="document.getElementById('extZipPicker').click()" class="button blue">Select ZIP...</button>
+      <span id="ext-status" style="margin-left:12px;font-size:13px;color:var(--muted)"></span>
+    </div>
+  </div>
 </section>
 
 {{ext_settings}}
 
 <script>
+  var content = el.parentElement.querySelector('.collapse-content');
+  var arrow = el.querySelector('.collapse-arrow');
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    arrow.innerHTML = '&#9660;';
+  } else {
+    content.style.display = 'none';
+    arrow.innerHTML = '&#9654;';
+  }
+}
+
+document.getElementById('extZipPicker').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var status = document.getElementById('ext-status');
+  status.textContent = 'Installing...';
+  status.style.color = 'var(--muted)';
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var base64 = ev.target.result.split(',')[1];
+    var params = new URLSearchParams();
+    params.set('filename', file.name);
+    params.set('filedata', base64);
+    fetch('/settings/install-extension', { method: 'POST', body: params })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) {
+          status.innerHTML = '<span style="color:var(--accent)">Installed ' + d.name + ' v' + d.version + '. Restarting...</span>';
+        } else {
+          status.innerHTML = '<span style="color:var(--danger)">Failed: ' + d.error + '</span>';
+        }
+      })
+      .catch(function(err) {
+        status.innerHTML = '<span style="color:var(--danger)">Error: ' + err.message + '</span>';
+      });
+  };
+  reader.readAsDataURL(file);
+});
 document.getElementById('dbFilePicker').addEventListener('change', function(e) {
   var file = e.target.files[0];
   if (!file) return;
@@ -92,3 +154,4 @@ document.getElementById('dbFilePicker').addEventListener('change', function(e) {
   reader.readAsDataURL(file);
 });
 </script>
+
