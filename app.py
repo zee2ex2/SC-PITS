@@ -212,7 +212,9 @@ class AppHandler(BaseHTTPRequestHandler):
                 exts_cfg = cfg.get("extensions", {})
                 for ext in discover_extensions():
                     enabled = exts_cfg.get(ext.name, {}).get("enabled", True)
-                    ext_list.append({"name": ext.name, "version": ext.version, "enabled": enabled})
+                    ctx = EXTENSION_CONTEXTS.get(ext.name, {})
+                    connected = ctx.get("ext_jock_connected", "false") == "true"
+                    ext_list.append({"name": ext.name, "version": ext.version, "enabled": enabled, "connected": connected})
                 body = render_settings(DATABASE, db=db, store=store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS, extensions_list=ext_list)
                 self.respond(body)
                 return
@@ -577,6 +579,7 @@ if __name__ == "__main__":
     print(f"  Local:    {LOCAL_URL}")
     print(f"  Network:  {NETWORK_URL}")
     print(f"  Database: {DATABASE}")
+    webbrowser.open(LOCAL_URL)
 
     ThreadingHTTPServer.allow_reuse_address = True
     server = ThreadingHTTPServer((HOST, PORT), AppHandler)
