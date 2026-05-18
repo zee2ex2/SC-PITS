@@ -15,7 +15,7 @@ from pathlib import Path
 
 from store import InventoryStore
 from render import load_templates, render_manage, render_settings, render_setup, escape, cents_from_scu, ext_context
-from extensions import discover_extensions
+from extensions import discover_extensions, Extension
 
 try:
     import rumps
@@ -469,7 +469,7 @@ class AppHandler(BaseHTTPRequestHandler):
                 ext_subdirs = set()
                 for name in names:
                     parts = name.split('/')
-                    if len(parts) >= 2 and parts[0] == 'extensions' and parts[1] and not name.endswith('/'):
+                    if len(parts) >= 3 and parts[0] == 'extensions' and parts[1] and not name.endswith('/'):
                         ext_subdirs.add(parts[1])
 
                 if not ext_subdirs:
@@ -496,16 +496,15 @@ class AppHandler(BaseHTTPRequestHandler):
                         return
 
                     try:
-                        import importlib.util
+                        import importlib
                         import sys
-                        ext_dir_str = str(ext_dir.resolve())
-                        if ext_dir_str not in sys.path:
-                            sys.path.insert(0, ext_dir_str)
-                        if "extensions" not in sys.modules:
-                            import extensions
-                        spec = importlib.util.spec_from_file_location(f"extensions.{ext_name}", init_file)
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
+                        base_str = str(BASE_DIR.resolve())
+                        if base_str not in sys.path:
+                            sys.path.insert(0, base_str)
+                        importlib.invalidate_caches()
+                        if "extensions.jock_strap" in sys.modules:
+                            del sys.modules["extensions.jock_strap"]
+                        mod = importlib.import_module(f"extensions.{ext_name}")
                         found = None
                         for attr_name in dir(mod):
                             attr = getattr(mod, attr_name)
