@@ -170,24 +170,18 @@ def render_settings(db_path, db=None, store=None, prefs=None, local_url="", netw
     exts_rows = ""
     if extensions_list:
         for ex in extensions_list:
-            is_jock = ex['name'] == 'jock_strap'
             ctx = (ext_ctx or {}).get(ex['name'], {})
             ext_status = ctx.get("ext_status", "")
             ext_status_cls = ctx.get("ext_status_cls", "")
             if ex["enabled"]:
                 if ext_status:
                     status, status_cls = ext_status, ext_status_cls
-                elif is_jock:
-                    status = "Connected" if ex['connected'] else "Disconnected"
-                    status_cls = "ok" if ex['connected'] else "error"
                 else:
                     status, status_cls = "Enabled", "ok"
             else:
                 status, status_cls = "Disabled", "error"
-            toggle_cls = "ok" if ex["enabled"] else "hold"
-            toggle_label = "Enabled" if ex["enabled"] else "Disabled"
-            expand_flag = "jock" if is_jock and not ex["enabled"] else ""
-            confirm_msg = "Disable JOCK Strap?" if is_jock and ex["enabled"] else ""
+            expand_flag = ""
+            confirm_msg = "Disable this extension?" if ex["enabled"] else ""
             toggle_html = f"""<form method="post" action="/settings/toggle-extension" style="display:inline" class="ext-toggle" data-name="{escape(ex['name'])}" data-expand="{expand_flag}" data-confirm="{confirm_msg}">
             <input type="hidden" name="name" value="{escape(ex['name'])}">
             <label class="toggle-switch">
