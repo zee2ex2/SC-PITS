@@ -1,35 +1,63 @@
-#!/usr/bin/env bash
-set -euo pipefail
-DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$DIR"
+#!/bin/bash
+# Build PITS macOS DMG
+# Usage: ./build_dmg.sh [path-to-pits-app]
 
-APP_BUNDLE="$DIR/dist/SC PITS.app"
-DMG_PATH="$DIR/dist/SC PITS.dmg"
-STAGING="/tmp/sc_pits_dmg"
+set -e
+APP="${1:-dist/PITS.app}"
+DMG="dist/PITS-0.3.0.dmg"
+TMP="dist/PITS-tmp.dmg"
+VOLNAME="PITS"
+BG="PITS_DMG_BG.png"
 
-if [ ! -d "$APP_BUNDLE" ]; then
-  echo "Error: Build the app first with ./build_macos.sh"
-  exit 1
+if [ ! -d "$APP" ]; then
+    echo "Error: $APP not found. Build the .app first."
+    exit 1
 fi
 
-rm -rf "$STAGING" "$DMG_PATH"
-mkdir -p "$STAGING"
+rm -f "$DMG" "$TMP"
 
-# Copy the .app bundle into the staging folder
-cp -R "$APP_BUNDLE" "$STAGING/"
+hdiutil create -volname "$VOLNAME" -srcfolder "$APP" -ov -format UDRW -fs HFS+ "$TMP"
+MOUNT=$(hdiutil attach "$TMP" -nobrowse -mountroot /tmp | tail -1 | awk '{print $NF}')
 
-# Symlink to /Applications for drag-and-drop install
-ln -s /Applications "$STAGING/Applications"
+ln -sf /Applications "$MOUNT/Applications"
+mkdir -p "$MOUNT/.background"
+cp "$BG" "$MOUNT/.background/"
 
-echo "Creating DMG..."
-hdiutil create -volname "SC PITS" \
-  -srcfolder "$STAGING" \
-  -ov -format UDZO \
-  -fs HFS+ \
-  "$DMG_PATH" 2>&1 | tail -3
+sleep 1
+open "$MOUNT"
+sleep 2
 
-rm -rf "$STAGING"
+osascript << EOF
+tell application "Finder"
+    set v to (first window whose name = "$VOLNAME")
+    set current view of v to icon view
+    set toolbar visible of v to false
+    set statusbar visible of v to false
+    set bounds of v to {200, 200, 840, 712}
+    set opts to icon view options of v
+    set arrangement of opts to not arranged
+    set icon size of opts to 164
+    try
+        set background picture of opts to POSIX file "$MOUNT/.background/$BG"
+    end try
+end tell
+EOF
 
-echo ""
-echo "DMG created: $DMG_PATH"
-echo "Size: $(du -sh "$DMG_PATH" | cut -f1)"
+sleep 1
+osascript << EOF
+tell application "Finder"
+    set v to (first window whose name = "$VOLNAME")
+    set position of item "Applications" of v to {133, 208}
+    set position of item "PITS.app" of v to {517, 208}
+end tell
+EOF
+
+sleep 2
+osascript -e 'tell application "Finder" to close every window'
+sleep 1
+
+hdiutil detach "$MOUNT" -force 2>/dev/null
+sleep 1
+hdiutil convert "$TMP" -format UDZO -o "$DMG"
+rm -f "$TMP"
+echo "Created: $DMG"
