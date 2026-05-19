@@ -22,6 +22,9 @@ Download the latest release from the [Releases page](https://github.com/zee2ex2/
 ### macOS
 Open `PITS-x.x.x.dmg` and drag `PITS.app` to Applications.
 
+### Windows
+Run `PITS-x.x.x-Setup.exe` and follow the installer. The app will be installed to Program Files with Start Menu and Desktop shortcuts.
+
 ## Quick Start
 
 1. Launch PITS
