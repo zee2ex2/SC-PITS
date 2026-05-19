@@ -1,10 +1,9 @@
 #!/bin/bash
 # Build PITS macOS DMG
-# Usage: ./build_dmg.sh [path-to-pits-app]
 
 set -e
 APP="${1:-dist/PITS.app}"
-DMG="dist/PITS-0.3.0.dmg"
+DMG="dist/PITS-0.4.0.dmg"
 TMP="dist/PITS-tmp.dmg"
 VOLNAME="PITS"
 BG="PITS_DMG_BG.png"
@@ -12,6 +11,14 @@ BG="PITS_DMG_BG.png"
 if [ ! -d "$APP" ]; then
     echo "Error: $APP not found. Build the .app first."
     exit 1
+fi
+
+# Set LSUIElement to hide dock icon (menu-bar only app)
+PLIST="$APP/Contents/Info.plist"
+if grep -q "LSUIElement" "$PLIST" 2>/dev/null; then
+    sed -i '' 's|<string>0</string>.*</key>.*LSUIElement|<string>1</string></key><key>LSUIElement|' "$PLIST" 2>/dev/null || true
+else
+    sed -i '' 's|<key>NSHighResolutionCapable</key>|<key>LSUIElement</key><string>1</string><key>NSHighResolutionCapable</key>|' "$PLIST"
 fi
 
 rm -f "$DMG" "$TMP"
