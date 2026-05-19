@@ -8,6 +8,7 @@ class Extension:
     name = ""
     version = "1.0"
     description = ""
+    repo_url = ""
     settings_template = None
 
     def on_startup(self, globals_dict):

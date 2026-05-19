@@ -329,3 +329,38 @@ document.addEventListener('change', function(e) {
       }
     });
 });
+
+function checkUpdates() {
+  var status = document.getElementById('update-status');
+  var results = document.getElementById('update-results');
+  status.textContent = 'Checking...';
+  results.innerHTML = '';
+  fetch('/settings/check-updates', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var html = '';
+      if (d.pits && d.pits.update_available) {
+        html += '<div style="color:var(--accent)">PITS v' + d.pits.latest + ' available (current: v' + d.pits.current + ')</div>';
+      }
+      for (var name in d.extensions) {
+        var info = d.extensions[name];
+        if (info.update_available) {
+          html += '<div style="color:var(--accent)">' + name + ' v' + info.latest + ' available (current: v' + info.current + ')</div>';
+        }
+      }
+      if (!html) html = '<div style="color:var(--muted)">All up to date.</div>';
+      results.innerHTML = html;
+      status.textContent = '';
+    })
+    .catch(function(err) {
+      status.innerHTML = '<span style="color:var(--danger)">Error checking updates</span>';
+    });
+}
+
+function toggleAutoUpdate(cb) {
+  var params = new URLSearchParams();
+  params.set('enabled', cb.checked ? '1' : '0');
+  fetch('/settings/toggle-auto-update', { method: 'POST', body: params })
+    .then(function(r) { return r.json(); })
+    .then(function(d) { if (!d.success) cb.checked = !cb.checked; });
+}
