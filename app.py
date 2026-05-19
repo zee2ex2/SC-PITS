@@ -205,7 +205,7 @@ class AppHandler(BaseHTTPRequestHandler):
                 return
 
             if path == "/" or path == "/manage":
-                body = render_manage(db, qs, store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS)
+                body = render_manage(db, qs, store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS, pits_version=PITS_VERSION)
                 self.respond(body)
                 return
 

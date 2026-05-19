@@ -130,7 +130,7 @@ def ext_context(extensions_ctx=None):
     }
 
 
-def wrap_page(content, notice="", kind="success", prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None):
+def wrap_page(content, notice="", kind="success", prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, pits_version=""):
     notice_html = ""
     if db_compat_warning:
         notice_html += f'<div class="messages"><div class="message warning">{escape(db_compat_warning)}</div></div>'
@@ -139,17 +139,18 @@ def wrap_page(content, notice="", kind="success", prefs=None, local_url="", netw
     theme_class = "light" if prefs and prefs.get("theme") == "light" else "dark"
     ctx = {"notice_html": notice_html, "content": content,
            "theme_class": theme_class, "local_url": escape(local_url),
-           "network_url": escape(network_url)}
+           "network_url": escape(network_url),
+           "pits_version": f"PITS v{pits_version}" if pits_version else ""}
     if ext_ctx is not None:
         ec = ext_context(ext_ctx)
         ctx.update(ec)
     return render_template("base", **ctx)
 
 
-def render_setup(missing, local_url="", network_url="", db_compat_warning=None):
+def render_setup(missing, local_url="", network_url="", db_compat_warning=None, pits_version=""):
     missing_list = "".join(f"<li>{escape(table)}</li>" for table in missing)
     content = render_template("setup", missing_list=missing_list)
-    return wrap_page(content, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning)
+    return wrap_page(content, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, pits_version=pits_version)
 
 
 def render_settings(db_path, db=None, store=None, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, extensions_list=None, pits_version=""):
@@ -212,7 +213,7 @@ def render_settings(db_path, db=None, store=None, prefs=None, local_url="", netw
     return wrap_page(content, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, ext_ctx=ext_ctx)
 
 
-def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None):
+def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, pits_version=""):
     page = int(qs.get("page", "1"))
     per_page = int(qs.get("per_page", prefs.get("per_page", "15") if prefs else "15"))
     search = qs.get("q", "").strip()
@@ -298,4 +299,4 @@ def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_co
         qty_min=html.escape(str(qty_min if qty_min else ""), quote=True),
         qty_max=html.escape(str(qty_max if qty_max else ""), quote=True),
     )
-    return wrap_page(content, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, ext_ctx=ext_ctx)
+    return wrap_page(content, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, ext_ctx=ext_ctx, pits_version=pits_version)
