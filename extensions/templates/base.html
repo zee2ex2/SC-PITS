@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" class="{{theme_class}}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>P.I.T.S.</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="stylesheet" href="/static/styles.css?v=2">{{ext_styles}}
+    <script>window.EXT_DATA = {{ext_data_json}};</script>
+    <script src="/static/pits.js?v=3"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>P.I.T.S.{{ext_title_suffix}}</h1>
+        <p class="network-info">{{network_url}}</p>
+      </div>
+      <nav class="nav-links">
+        <a class="button ghost" href="/manage">Inventory</a>
+        {{ext_nav_items}}
+        <a class="button ghost" href="/settings" aria-label="Settings" title="Settings">&#x2699;&#xFE0F;</a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">&#x263E;</button>
+      </nav>
+    </header>
+    <main>{{notice_html}}{{content}}</main>
+    <div id="modal" class="modal-overlay" style="display:none" onclick="if(event.target==this)closeModal()">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span id="modal-title"></span>
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+    <footer class="footer">
+      <span>Personal Inventory Tracker System</span>
+      <span>{{pits_version}}</span>
+    </footer>
+  </body>
+</html>

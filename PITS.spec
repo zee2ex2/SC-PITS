@@ -4,8 +4,10 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [('templates', 'templates'), ('static', 'static'), ('extensions', 'extensions'), ('AppIcon.icns', '.')]
 binaries = []
-hiddenimports = ['extensions', 'websocket']
+hiddenimports = ['extensions', 'websocket', 'rumps']
 hiddenimports += collect_submodules('extensions')
+tmp_ret = collect_all('rumps')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('websocket')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 

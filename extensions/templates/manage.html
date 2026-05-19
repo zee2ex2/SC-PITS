@@ -1,0 +1,98 @@
+<section class="panel">
+  <div class="section-heading">
+    <h2>Inventory Rows</h2>
+    <div class="filter-bar">
+      <form method="get" action="/manage" class="search-form">
+        <span class="search-wrap">
+          <input type="search" name="q" placeholder="Search items..." value="{{search_query}}">
+        </span>
+        <button class="icon-btn" type="submit" aria-label="Search" title="Search items">&#x1F50D;</button>
+        <input type="hidden" name="qual_min" value="{{qual_min}}">
+        <input type="hidden" name="qual_max" value="{{qual_max}}">
+        <input type="hidden" name="qty_min" value="{{qty_min}}">
+      </form>
+      <button class="icon-btn" onclick="showFilter('filter')" aria-label="Filter" title="Filter"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:middle"><path d="M1 2h14l-5 7v4l-4 1.5V9L1 2z"/></svg></button>
+    </div>
+  </div>
+
+  <form action="/manage/add" method="post" class="inline-form" style="margin-bottom:16px" onsubmit="return (function(){var id=document.getElementById('item-id').value;var name=document.getElementById('item-name-input').value;return id!='' && (window.ADD_ITEMS||[]).some(function(i){return String(i.id)===id && i.name===name});})()">
+    <div class="autocomplete-wrap" style="display:inline-block;position:relative;vertical-align:middle">
+      <label for="item-name-input" style="display:block;font-size:11px;color:var(--muted);margin-bottom:2px">Item</label>
+      <input type="text" name="item_name" id="item-name-input" placeholder="Start typing..."  oninput="itemAutocomplete(this)" required style="width:180px" class="sm-input">
+      <input type="hidden" name="itemid" id="item-id">
+      <div class="search-suggestions" id="item-suggestions"></div>
+    </div>
+    <div class="autocomplete-wrap" style="display:inline-block;position:relative;vertical-align:middle">
+      <label for="station-name-input" style="display:block;font-size:11px;color:var(--muted);margin-bottom:2px">Station</label>
+      <input type="text" name="station_name" id="station-name-input" placeholder="Start typing..."  oninput="stationAutocomplete(this)" style="width:180px" class="sm-input">
+      <input type="hidden" name="stationid" id="station-id" class="station-id">
+      <div class="search-suggestions" id="station-suggestions"></div>
+    </div>
+    <div style="display:inline-block;position:relative;vertical-align:middle">
+      <label for="qual" style="display:block;font-size:11px;color:var(--muted);margin-bottom:2px">Quality</label>
+      <input name="qual" id="qual" type="number" min="0" max="1000" placeholder="500" required class="sm-input" style="width:80px">
+    </div>
+    <div style="display:inline-block;position:relative;vertical-align:middle">
+      <label for="qty_scu" style="display:block;font-size:11px;color:var(--muted);margin-bottom:2px">QTY (SCU)</label>
+      <input name="qty_scu" id="qty_scu" type="number" min="0.01" step="0.01" placeholder="1.00" required class="sm-input" style="width:100px">
+    </div>
+    <div style="display:inline-block;vertical-align:middle">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:2px;visibility:hidden">&#xa0;</div>
+      <button type="submit" class="button green" style="margin-top:0">Add</button>
+    </div>
+  </form>
+  <script>var ADD_ITEMS = {{add_items_json}}; var ADD_STATIONS = {{add_stations_json}};</script>
+
+  <div id="filter-overlay" class="modal-overlay" style="display:none" onclick="if(event.target==this)hideFilter('filter')">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Filter Inventory</span>
+        <button class="modal-close" onclick="hideFilter('filter')">&times;</button>
+      </div>
+      <form method="get" action="/manage">
+        <input type="hidden" name="q" value="{{search_query}}">
+
+        <div class="filter-group">
+          <label>Quality</label>
+          <div class="dual-slider">
+            <div class="slider-track"></div>
+            <input type="range" class="slider-thumb" name="qual_min" min="0" max="1000" value="{{qual_min}}" oninput="syncQual(event)">
+            <input type="range" class="slider-thumb slider-max" name="qual_max" min="0" max="1000" value="{{qual_max}}" oninput="syncQual(event)">
+          </div>
+          <div class="slider-values" id="qual-values">{{qual_min}} &ndash; {{qual_max}}</div>
+        </div>
+
+        <div class="filter-group">
+          <label>Minimum QTY</label>
+          <div class="qty-slider-wrap">
+            <div class="slider-track"></div>
+            <input type="range" id="qty-slider" min="0" max="48" value="0" oninput="updateQtyFilter(this)">
+          </div>
+          <input type="hidden" name="qty_min" id="qty-min-cents" value="{{qty_min}}">
+          <div class="slider-values" id="qty-display">0.00 SCU</div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:8px">
+          <button type="submit">Apply</button>
+          <a class="button ghost" href="/manage">Clear</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      initQtyFilter("{{qty_min}}" || "0");
+      syncQualFromStatic();
+    })();
+  </script>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Item</th><th>Station</th><th>Qual</th><th>QTY</th><th>Actions</th></tr></thead>
+      <tbody>{{inventory_rows}}</tbody>
+    </table>
+  </div>
+  {{nav}}
+</section>
+
+
