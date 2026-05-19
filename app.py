@@ -497,6 +497,7 @@ class AppHandler(BaseHTTPRequestHandler):
         import json as _json
         data = _json.loads(body)
         self._apply_updates(data)
+        self.respond_json({"success": True})
         self._schedule_restart()
 
     def _schedule_restart(self):

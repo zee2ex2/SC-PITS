@@ -339,22 +339,21 @@ function checkUpdates() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       var html = '';
-      var hasUpdates = false;
+      var hasExtUpdates = false;
       if (d.pits && d.pits.update_available) {
-        hasUpdates = true;
-        html += '<div style="margin:6px 0;display:flex;align-items:center;gap:8px"><span>PITS v' + d.pits.latest + ' available (current: v' + d.pits.current + ')</span></div>';
+        html += '<div style="margin:6px 0;display:flex;align-items:center;gap:8px"><span>PITS v' + d.pits.latest + ' available (current: v' + d.pits.current + ') </span><a class="button blue" href="https://github.com/zee2ex2/SC-PITS/releases/latest" target="_blank">Download</a></div>';
       }
       for (var name in d.extensions) {
         var info = d.extensions[name];
         if (info.update_available) {
-          hasUpdates = true;
+          hasExtUpdates = true;
           html += '<div style="margin:6px 0;display:flex;align-items:center;gap:8px"><span>' + name + ' v' + info.latest + ' available (current: v' + info.current + ')</span></div>';
         }
       }
       if (!html) {
         html = '<div style="color:var(--muted)">All up to date.</div>';
-      } else {
-        html += '<div style="margin-top:12px"><button class="button green" onclick="installUpdates(\'' + encodeURIComponent(JSON.stringify(d)) + '\')">Install All Updates</button></div>';
+      } else if (hasExtUpdates) {
+        html += '<div style="margin-top:12px"><button class="button green" onclick="installUpdates(\'' + encodeURIComponent(JSON.stringify(d)) + '\')">Install Extension Updates</button></div>';
       }
       results.innerHTML = html;
       status.textContent = '';
