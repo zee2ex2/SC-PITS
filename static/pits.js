@@ -339,16 +339,23 @@ function checkUpdates() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       var html = '';
+      var hasUpdates = false;
       if (d.pits && d.pits.update_available) {
-        html += '<div style="color:var(--accent)">PITS v' + d.pits.latest + ' available (current: v' + d.pits.current + ')</div>';
+        hasUpdates = true;
+        html += '<div style="margin:6px 0;display:flex;align-items:center;gap:8px"><span>PITS v' + d.pits.latest + ' available (current: v' + d.pits.current + ')</span></div>';
       }
       for (var name in d.extensions) {
         var info = d.extensions[name];
         if (info.update_available) {
-          html += '<div style="color:var(--accent)">' + name + ' v' + info.latest + ' available (current: v' + info.current + ')</div>';
+          hasUpdates = true;
+          html += '<div style="margin:6px 0;display:flex;align-items:center;gap:8px"><span>' + name + ' v' + info.latest + ' available (current: v' + info.current + ')</span></div>';
         }
       }
-      if (!html) html = '<div style="color:var(--muted)">All up to date.</div>';
+      if (!html) {
+        html = '<div style="color:var(--muted)">All up to date.</div>';
+      } else {
+        html += '<div style="margin-top:12px"><button class="button green" onclick="installUpdates(\'' + encodeURIComponent(JSON.stringify(d)) + '\')">Install All Updates</button></div>';
+      }
       results.innerHTML = html;
       status.textContent = '';
     })
@@ -357,10 +364,17 @@ function checkUpdates() {
     });
 }
 
-function toggleAutoUpdate(cb) {
+function installUpdates(dataStr) {
+  var status = document.getElementById('update-status');
+  status.textContent = 'Installing...';
+  var data = JSON.parse(decodeURIComponent(dataStr));
   var params = new URLSearchParams();
-  params.set('enabled', cb.checked ? '1' : '0');
-  fetch('/settings/toggle-auto-update', { method: 'POST', body: params })
-    .then(function(r) { return r.json(); })
-    .then(function(d) { if (!d.success) cb.checked = !cb.checked; });
+  params.set('data', JSON.stringify(data));
+  fetch('/settings/apply-updates', { method: 'POST', body: JSON.stringify(data) })
+    .then(function() {
+      status.innerHTML = '<span style="color:var(--accent)">Updates applied. Restarting...</span>';
+    })
+    .catch(function(err) {
+      status.innerHTML = '<span style="color:var(--danger)">Install failed: ' + err.message + '</span>';
+    });
 }

@@ -152,7 +152,7 @@ def render_setup(missing, local_url="", network_url="", db_compat_warning=None):
     return wrap_page(content, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning)
 
 
-def render_settings(db_path, db=None, store=None, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, extensions_list=None, pits_version="", auto_update=False):
+def render_settings(db_path, db=None, store=None, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, extensions_list=None, pits_version=""):
     system_select = ""
     schema_version = ""
     ext_settings_html = ""
@@ -198,16 +198,11 @@ def render_settings(db_path, db=None, store=None, prefs=None, local_url="", netw
     if not exts_rows:
         exts_rows = '<tr><td colspan="4" class="empty">No extensions installed.</td></tr>'
 
-    auto_checked = 'checked' if auto_update else ''
     update_card = f"""<section class="panel">
     <div class="section-heading"><h2>Updates</h2></div>
     <p style="margin-bottom:12px;color:var(--muted);font-size:13px">PITS v{pits_version}</p>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="button blue" onclick="checkUpdates()">Check for Updates</button>
-        <label class="checkbox-label" style="margin:0">
-            <input type="checkbox" name="auto_update" value="1" {auto_checked} onchange="toggleAutoUpdate(this)">
-            Auto-update at 4am
-        </label>
         <span id="update-status" style="margin-left:8px;font-size:13px;color:var(--muted)"></span>
     </div>
     <div id="update-results" style="margin-top:12px;font-size:13px"></div>

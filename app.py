@@ -17,7 +17,7 @@ from store import InventoryStore
 from render import load_templates, render_manage, render_settings, render_setup, escape, cents_from_scu, ext_context
 from extensions import discover_extensions, Extension
 
-PITS_VERSION = "0.3.0"
+PITS_VERSION = "0.4.0"
 PITS_REPO = "zee2ex2/SC-PITS"
 
 try:
@@ -218,7 +218,7 @@ class AppHandler(BaseHTTPRequestHandler):
                     ctx = EXTENSION_CONTEXTS.get(ext.name, {})
                     connected = ctx.get("ext_jock_connected", "false") == "true"
                     ext_list.append({"name": ext.name, "version": ext.version, "enabled": enabled, "connected": connected})
-                body = render_settings(DATABASE, db=db, store=store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS, extensions_list=ext_list, pits_version=PITS_VERSION, auto_update=cfg.get("auto_update", False))
+                body = render_settings(DATABASE, db=db, store=store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS, extensions_list=ext_list, pits_version=PITS_VERSION)
                 self.respond(body)
                 return
 
@@ -247,8 +247,8 @@ class AppHandler(BaseHTTPRequestHandler):
             self._settings_check_updates()
             return
 
-        if parsed.path == "/settings/toggle-auto-update":
-            self._settings_toggle_auto_update()
+        if parsed.path == "/settings/apply-updates":
+            self._settings_apply_updates()
             return
 
         length = int(self.headers.get("Content-Length", "0"))
@@ -417,7 +417,7 @@ class AppHandler(BaseHTTPRequestHandler):
     def _check_updates():
         """Check GitHub for newer versions of PITS and installed extensions."""
         import urllib.request
-        results = {"pits": {"current": PITS_VERSION, "latest": None, "update_available": False},
+        results = {"pits": {"current": PITS_VERSION, "latest": None, "update_available": False, "zip_url": ""},
                    "extensions": {}}
         try:
             req = urllib.request.Request(
@@ -431,6 +431,9 @@ class AppHandler(BaseHTTPRequestHandler):
                 if re.match(r'^\d+\.\d+', tag) and tag != PITS_VERSION:
                     results["pits"]["latest"] = tag
                     results["pits"]["update_available"] = True
+                    for a in data.get("assets", []):
+                        if a.get("name", "").endswith(".dmg"):
+                            results["pits"]["zip_url"] = a.get("browser_download_url", "")
         except Exception:
             pass
 
@@ -448,53 +451,25 @@ class AppHandler(BaseHTTPRequestHandler):
                     tag = data.get("tag_name", "").lstrip("v")
                     current = getattr(ext, "version", "0")
                     if tag and tag != current:
-                        results["extensions"][ext.name] = {"current": current, "latest": tag, "update_available": True}
+                        zip_url = ""
+                        for a in data.get("assets", []):
+                            if a.get("name", "").endswith(".zip"):
+                                zip_url = a.get("browser_download_url", "")
+                        results["extensions"][ext.name] = {"current": current, "latest": tag, "update_available": True, "zip_url": zip_url}
             except Exception:
                 pass
         return results
 
     @staticmethod
-    def _schedule_auto_update():
-        """Check for updates at 4am local time daily."""
-        import threading
-        import time
-        def _run():
-            while True:
-                now = time.localtime()
-                next_check = time.mktime((now.tm_year, now.tm_mon, now.tm_mday, 4, 0, 0, now.tm_wday, now.tm_yday, now.tm_isdst))
-                if next_check <= time.time():
-                    next_check += 86400
-                time.sleep(next_check - time.time())
-                cfg = load_config()
-                if cfg.get("auto_update", False):
-                    results = AppHandler._check_updates()
-                    for ext_name, info in results.get("extensions", {}).items():
-                        if info.get("update_available"):
-                            AppHandler._apply_extension_update(ext_name)
-                    if results.get("pits", {}).get("update_available"):
-                        AppHandler._apply_pits_update(results["pits"]["latest"])
-        t = threading.Thread(target=_run, daemon=True)
-        t.start()
-
-    @staticmethod
-    def _apply_extension_update(ext_name):
-        """Download and apply an extension update from GitHub."""
-        for ext in EXTENSIONS:
-            if ext.name == ext_name and hasattr(ext, "repo_url"):
-                repo = ext.repo_url
+    def _apply_updates(data):
+        """Apply extension updates, then restart PITS."""
+        import urllib.request
+        import zipfile, io
+        # Apply extension updates first
+        for ext_name, info in data.get("extensions", {}).items():
+            if info.get("zip_url"):
                 try:
-                    import urllib.request
-                    import zipfile, io
-                    req = urllib.request.Request(
-                        f"https://api.github.com/repos/{repo}/releases/latest",
-                        headers={"User-Agent": "PITS/0.3.0", "Accept": "application/vnd.github.v3+json"}
-                    )
-                    with urllib.request.urlopen(req, timeout=10) as resp:
-                        data = json.loads(resp.read().decode())
-                        zip_url = data.get("zipball_url", "")
-                        if not zip_url:
-                            return
-                    dl = urllib.request.Request(zip_url, headers={"User-Agent": "PITS/0.3.0"})
+                    dl = urllib.request.Request(info["zip_url"], headers={"User-Agent": "PITS/0.3.0"})
                     with urllib.request.urlopen(dl, timeout=30) as resp:
                         z = zipfile.ZipFile(io.BytesIO(resp.read()))
                         target = BASE_DIR / "extensions" / ext_name
@@ -511,24 +486,27 @@ class AppHandler(BaseHTTPRequestHandler):
                                         dest.write_bytes(z.read(name))
                 except Exception:
                     pass
-                break
-
-    @staticmethod
-    def _apply_pits_update(version):
-        """Download PITS update (just marks that update is available)."""
-        pass  # PITS updates require manual restart
 
     def _settings_check_updates(self):
         results = self._check_updates()
         self.respond_json(results)
 
-    def _settings_toggle_auto_update(self):
+    def _settings_apply_updates(self):
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length).decode("utf-8")
-        form = urllib.parse.parse_qs(body)
-        enabled = form.get("enabled", [""])[0] == "1"
-        save_config({"auto_update": enabled})
-        self.respond_json({"success": True, "enabled": enabled})
+        import json as _json
+        data = _json.loads(body)
+        self._apply_updates(data)
+        self._schedule_restart()
+
+    def _schedule_restart(self):
+        import subprocess, sys, time
+        time.sleep(0.5)
+        try:
+            subprocess.Popen([sys.executable, "-u"] + sys.argv)
+        except Exception:
+            pass
+        os._exit(0)
 
     def _settings_toggle_extension(self):
         length = int(self.headers.get("Content-Length", "0"))
@@ -799,7 +777,6 @@ if __name__ == "__main__":
             EXTENSION_CONTEXTS[ext.name] = ctx
 
     _refresh_ext_contexts()
-    AppHandler._schedule_auto_update()
 
     existing_db = DATABASE.exists()
     if not existing_db and DATABASE == DEFAULT_DB:
