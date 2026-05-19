@@ -180,6 +180,14 @@ class AppHandler(BaseHTTPRequestHandler):
             self.serve_static(BASE_DIR / "static" / "pits.js", "application/javascript; charset=utf-8")
             return
 
+        if path == "/static/favicon.png":
+            self.serve_static(BASE_DIR / "static" / "favicon.png", "image/png")
+            return
+
+        if path == "/static/favicon.ico":
+            self.serve_static(BASE_DIR / "static" / "favicon.ico", "image/x-icon")
+            return
+
         raw = urllib.parse.parse_qs(parsed.query)
         qs = {k: v[0] for k, v in raw.items() if v[0]}
         notice = qs.pop("notice", "")

@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_submodules
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('templates', 'templates'), ('static', 'static'), ('extensions', 'extensions'), ('icon_PITS.icns', '.')]
+datas = [('templates', 'templates'), ('static', 'static'), ('extensions', 'extensions'), ('AppIcon.icns', '.')]
 binaries = []
 hiddenimports = ['extensions', 'websocket']
 hiddenimports += collect_submodules('extensions')
@@ -41,7 +41,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['icon_PITS.icns'],
+    icon=['AppIcon.icns'],
 )
 coll = COLLECT(
     exe,
@@ -55,6 +55,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='PITS.app',
-    icon='icon_PITS.icns',
+    icon='AppIcon.icns',
     bundle_identifier=None,
 )
