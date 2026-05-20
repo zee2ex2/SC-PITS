@@ -389,7 +389,7 @@ function installUpdates(dataStr) {
       } else if (evt.type === "inventory_update") {
         var onManage = window.location.pathname === "/" || window.location.pathname === "/manage";
         if (onManage) {
-          window.location.reload();
+          flashInventory(evt.data.action, evt.data.name);
         } else {
           showBanner("Inventory changed externally.", "warning");
         }
@@ -397,6 +397,26 @@ function installUpdates(dataStr) {
     } catch(_) {}
   };
 })();
+
+function flashInventory(action, name) {
+  var rows = document.querySelectorAll("table tbody tr");
+  var found = false;
+  rows.forEach(function(row) {
+    var cells = row.querySelectorAll("td");
+    if (cells.length >= 2 && cells[1].textContent.trim() === name) {
+      found = true;
+      if (action === "add") {
+        row.classList.add("flash-added");
+      } else if (action === "delete") {
+        row.classList.add("flash-deleted");
+      }
+    }
+  });
+  if (!found) {
+    document.querySelector("table") && document.querySelector("table").classList.add("flash-refresh");
+  }
+  setTimeout(function() { window.location.reload(); }, 600);
+}
 
 function showBanner(text, kind) {
   var container = document.querySelector(".messages");

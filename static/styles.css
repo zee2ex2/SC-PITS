@@ -177,6 +177,28 @@ input[type=number] {
   text-decoration: underline;
 }
 
+@keyframes flashAdded {
+  0% { background: var(--ok-bg); }
+  100% { background: transparent; }
+}
+
+@keyframes flashDeleted {
+  0% { background: var(--danger-bg); }
+  100% { background: transparent; }
+}
+
+tr.flash-added {
+  animation: flashAdded 0.5s ease;
+}
+
+tr.flash-deleted {
+  animation: flashDeleted 0.5s ease;
+}
+
+table.flash-refresh {
+  animation: flashAdded 0.5s ease;
+}
+
 .summary-grid {
   display: grid;
   gap: 14px;
