@@ -433,6 +433,6 @@ function showBanner(text, kind) {
   if (kind === "success") {
     setTimeout(function() {
       if (msg.parentElement) msg.remove();
-    }, 10500);
+    }, 6000);
   }
 }
