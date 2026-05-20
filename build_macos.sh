@@ -9,7 +9,7 @@ rm -rf dist build
 
 # Build with --windowed to create a .app bundle
 pyinstaller --windowed --onedir \
-  --name "SC PITS" \
+  --name "PITS" \
   --icon "$DIR/icon_PITS.icns" \
   --add-data "$DIR/templates:templates" \
   --add-data "$DIR/static:static" \
@@ -23,7 +23,7 @@ pyinstaller --windowed --onedir \
   --contents-directory "_internal" \
   "$DIR/app.py"
 
-APP_BUNDLE="$DIR/dist/SC PITS.app"
+APP_BUNDLE="$DIR/dist/PITS.app"
 
 # Frameworks must contain a Python symlink for the windowed bootloader
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
