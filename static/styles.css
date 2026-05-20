@@ -115,23 +115,27 @@ input[type=number] {
 }
 
 .messages {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
 }
 
 .message {
-  border-radius: 8px;
   padding: 12px 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  color: #fff;
+  border-radius: 0;
+}
+
+.message + .message {
+  border-top: 1px solid rgba(0,0,0,0.3);
 }
 
 .message.success {
   background: var(--ok-bg);
-  color: var(--accent);
+  color: #fff;
   animation: slideUp 0.5s ease 9.5s forwards;
 }
 
@@ -149,12 +153,12 @@ input[type=number] {
 
 .message.error {
   background: var(--danger-bg);
-  color: var(--danger);
+  color: #fff;
 }
 
 .message.warning {
   background: var(--hold-bg);
-  color: var(--warning);
+  color: #fff;
 }
 
 .dismiss-btn {
