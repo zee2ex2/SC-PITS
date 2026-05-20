@@ -18,7 +18,6 @@ pyinstaller --windowed --onedir \
   --add-data "$DIR/mainInventory:." \
   --add-data "$DIR/AppIcon.icns:." \
   --hidden-import rumps \
-  --hidden-import websocket \
   --distpath "$DIR/dist" \
   --workpath "$DIR/build" \
   --specpath "$DIR/build" \
