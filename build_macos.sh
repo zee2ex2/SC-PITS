@@ -13,9 +13,9 @@ pyinstaller --windowed --onedir \
   --icon "$DIR/AppIcon.icns" \
   --add-data "$DIR/templates:templates" \
   --add-data "$DIR/static:static" \
+  --add-data "$DIR/extensions:extensions" \
   --add-data "$DIR/config.json:." \
   --add-data "$DIR/mainInventory:." \
-  --add-data "$DIR/AppIcon.icns:." \
   --add-data "$DIR/icon_PITS.icns:." \
   --add-data "$DIR/icon_PITS.png:." \
   --hidden-import rumps \
