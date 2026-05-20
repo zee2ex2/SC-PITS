@@ -2,7 +2,7 @@
 # Build PITS macOS DMG
 
 set -e
-APP="${1:-dist/PITS.app}"
+APP="${1:-dist/SC PITS.app}"
 DMG="dist/PITS-0.4.0.dmg"
 TMP="dist/PITS-tmp.dmg"
 VOLNAME="PITS"
@@ -55,7 +55,7 @@ osascript << EOF
 tell application "Finder"
     set v to (first window whose name = "$VOLNAME")
     set position of item "Applications" of v to {133, 208}
-    set position of item "PITS.app" of v to {517, 208}
+    set position of item "SC PITS.app" of v to {517, 208}
 end tell
 EOF
 
