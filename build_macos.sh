@@ -10,11 +10,13 @@ rm -rf dist build
 # Build with --windowed to create a .app bundle
 pyinstaller --windowed --onedir \
   --name "PITS" \
-  --icon "$DIR/icon_PITS.icns" \
+  --icon "$DIR/AppIcon.icns" \
   --add-data "$DIR/templates:templates" \
   --add-data "$DIR/static:static" \
   --add-data "$DIR/config.json:." \
   --add-data "$DIR/mainInventory:." \
+  --add-data "$DIR/AppIcon.icns:." \
+  --add-data "$DIR/icon_PITS.icns:." \
   --add-data "$DIR/icon_PITS.png:." \
   --hidden-import rumps \
   --distpath "$DIR/dist" \
