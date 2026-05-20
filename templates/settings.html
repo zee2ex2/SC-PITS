@@ -51,9 +51,13 @@
     <p class="subtle" style="color:var(--warning);margin-bottom:12px;font-size:13px">&#x26A0; Custom fields will not sync if they don't exist on ShoWER</p>
     <div class="section-heading"><h3 style="font-size:15px">Add Item</h3></div>
     <form action="/manage/add-item" method="post" class="inline-form">
-      <input name="item_id" type="number" placeholder="ID" required class="sm-input" style="width:60px" min="1">
-      <input name="name" placeholder="Item name" required class="sm-input" style="width:180px">
-      <input name="catid" type="number" min="0" value="1" aria-label="Category ID" required class="sm-input">
+      <input name="item_id" type="number" placeholder="ID" class="sm-input" style="width:60px" min="1">
+      <input name="name" placeholder="Item name" required class="sm-input" style="width:140px">
+      {{category_select}}
+      <input name="code" placeholder="Code" class="sm-input" style="width:80px">
+      <label class="checkbox-label" style="margin:0;font-size:12px">
+        <input type="checkbox" name="hasquality" value="1" checked> Quality
+      </label>
       <button type="submit" class="button green">Add Item</button>
     </form>
     <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">

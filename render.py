@@ -5,6 +5,18 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from urllib.parse import urlencode
 
+_message_queue = []
+
+
+def push_message(text, kind="success"):
+    _message_queue.append({"text": text, "kind": kind})
+
+
+def pop_messages():
+    msgs = list(_message_queue)
+    _message_queue.clear()
+    return msgs
+
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = Path(sys._MEIPASS)
@@ -133,9 +145,11 @@ def ext_context(extensions_ctx=None):
 def wrap_page(content, notice="", kind="success", prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, pits_version=""):
     notice_html = ""
     if db_compat_warning:
-        notice_html += f'<div class="messages"><div class="message warning">{escape(db_compat_warning)}</div></div>'
+        notice_html += f'<div class="messages"><div class="message warning">{escape(db_compat_warning)}<button class="dismiss-btn" onclick="this.parentElement.remove()">dismiss</button></div></div>'
     if notice:
-        notice_html += f'<div class="messages"><div class="message {escape(kind)}">{escape(notice)}</div></div>'
+        notice_html += f'<div class="messages"><div class="message {escape(kind)}">{escape(notice)}<button class="dismiss-btn" onclick="this.parentElement.remove()">dismiss</button></div></div>'
+    for msg in pop_messages():
+        notice_html += f'<div class="messages"><div class="message {msg["kind"]}">{escape(msg["text"])}<button class="dismiss-btn" onclick="this.parentElement.remove()">dismiss</button></div></div>'
     theme_class = "light" if prefs and prefs.get("theme") == "light" else "dark"
     ctx = {"notice_html": notice_html, "content": content,
            "theme_class": theme_class, "local_url": escape(local_url),
@@ -147,20 +161,26 @@ def wrap_page(content, notice="", kind="success", prefs=None, local_url="", netw
     return render_template("base", **ctx)
 
 
-def render_setup(missing, local_url="", network_url="", db_compat_warning=None, pits_version=""):
+def render_setup(missing, local_url="", network_url="", db_compat_warning=None, pits_version="", notice="", kind="success"):
     missing_list = "".join(f"<li>{escape(table)}</li>" for table in missing)
     content = render_template("setup", missing_list=missing_list)
-    return wrap_page(content, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, pits_version=pits_version)
+    return wrap_page(content, notice=notice, kind=kind, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, pits_version=pits_version)
 
 
-def render_settings(db_path, db=None, store=None, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, extensions_list=None, pits_version=""):
+def render_settings(db_path, db=None, store=None, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, extensions_list=None, pits_version="", notice="", kind="success"):
     system_select = ""
+    category_select = ""
     schema_version = ""
     ext_settings_html = ""
     if db and store:
         systems = store.systems(db)
         system_select = option_list(systems, "Star System", "systemid", value_key="id", label_key="Code", required=True)
         schema_version = str(store.get_schema_version(db))
+        try:
+            cats = store.categories(db)
+            category_select = option_list(cats, "Category", "catid", value_key="id", label_key="name", required=True, selected=1)
+        except Exception:
+            category_select = '<input name="catid" type="number" min="0" value="1" class="sm-input" style="width:60px">'
     if ext_ctx:
         sections = []
         for name, ctx in ext_ctx.items():
@@ -209,11 +229,11 @@ def render_settings(db_path, db=None, store=None, prefs=None, local_url="", netw
     <div id="update-results" style="margin-top:12px;font-size:13px"></div>
     </section>"""
 
-    content = update_card + render_template("settings", db_path=escape(str(db_path)), system_select=system_select, schema_version=escape(schema_version), ext_settings=ext_settings_html, installed_extensions=exts_rows)
-    return wrap_page(content, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, ext_ctx=ext_ctx)
+    content = update_card + render_template("settings", db_path=escape(str(db_path)), system_select=system_select, category_select=category_select, schema_version=escape(schema_version), ext_settings=ext_settings_html, installed_extensions=exts_rows)
+    return wrap_page(content, notice=notice, kind=kind, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, ext_ctx=ext_ctx)
 
 
-def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, pits_version=""):
+def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_compat_warning=None, ext_ctx=None, pits_version="", notice="", kind="success"):
     page = int(qs.get("page", "1"))
     per_page = int(qs.get("per_page", prefs.get("per_page", "15") if prefs else "15"))
     search = qs.get("q", "").strip()
@@ -299,4 +319,4 @@ def render_manage(db, qs, store, prefs=None, local_url="", network_url="", db_co
         qty_min=html.escape(str(qty_min if qty_min else ""), quote=True),
         qty_max=html.escape(str(qty_max if qty_max else ""), quote=True),
     )
-    return wrap_page(content, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, ext_ctx=ext_ctx, pits_version=pits_version)
+    return wrap_page(content, notice=notice, kind=kind, prefs=prefs, local_url=local_url, network_url=network_url, db_compat_warning=db_compat_warning, ext_ctx=ext_ctx, pits_version=pits_version)

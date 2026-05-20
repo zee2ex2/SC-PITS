@@ -1,6 +1,6 @@
 import sqlite3
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def db_connect(database, timeout=10):
@@ -82,7 +82,58 @@ class InventoryStore:
             FOREIGN KEY (itemid) REFERENCES item(id),
             FOREIGN KEY (stationid) REFERENCES stations(id)
         )""")
+        db.execute("""CREATE TABLE IF NOT EXISTS itemcategory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            parent_id INTEGER DEFAULT 0
+        )""")
         db.commit()
+        db.execute("INSERT OR IGNORE INTO systems (id, Name, Code) VALUES (68, 'Stanton', 'ST')")
+        db.commit()
+        db.execute("CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value TEXT)")
+        current_v = self.get_schema_version(db)
+        if current_v < 2:
+            self._migrate_to_v2(db)
+        if current_v == 0:
+            self.set_schema_version(db, SCHEMA_VERSION)
+        db.commit()
+
+    def _migrate_to_v2(self, db):
+        olds = [row["name"] for row in db.execute("PRAGMA table_info(item)").fetchall()]
+        if "hasquality" not in olds:
+            db.execute("ALTER TABLE item ADD COLUMN hasquality INTEGER DEFAULT 0")
+        if "code" not in olds:
+            db.execute("ALTER TABLE item ADD COLUMN code TEXT DEFAULT ''")
+        if db.execute("SELECT COUNT(*) FROM itemcategory").fetchone()[0] == 0:
+            cats = [(1, "Commodity", 0), (2, "Ores", 1), (3, "Vehicle Mining", 1),
+                    (4, "FPS Mining", 1), (5, "Harvestable", 1), (6, "Salvage", 1)]
+            for c in cats:
+                db.execute("INSERT OR IGNORE INTO itemcategory (id, name, parent_id) VALUES (?, ?, ?)", c)
+        # Set catid assignments
+        cat_map = {
+            2: [1, 5, 7, 11, 13, 15, 20, 22, 33, 39, 101, 44, 47, 184, 194, 58, 60, 124, 188, 100, 122, 73, 103, 75, 190, 77],
+            3: [167, 170, 169, 168],
+            4: [8, 179, 178, 28, 36, 171, 46, 200, 172],
+            5: [105, 24, 35, 37, 55, 57, 65, 66, 72, 198, 18],
+            6: [63, 181, 182, 183],
+        }
+        for catid, ids in cat_map.items():
+            for iid in ids:
+                db.execute("UPDATE item SET catid=? WHERE id=?", (catid, iid))
+        db.execute("UPDATE item SET hasquality=1 WHERE catid IN (2,3,4)")
+        # Add new items with IDs
+        new_items = [
+            (178, "Carinite Pure", 4, "CARIP"),
+            (172, "Saldynium", 4, "SALD"),
+        ]
+        for iid, name, catid, code in new_items:
+            db.execute("INSERT OR IGNORE INTO item (id, name, catid, code, hasquality) VALUES (?, ?, ?, ?, 1)", (iid, name, catid, code))
+        # Add items without fixed IDs
+        for name, catid, code in [("Amiant", 4, "AMIA"), ("Flareweed", 4, "FLWD"), ("Fotia", 4, "FTIA"), ("Pingala", 4, "PNGL")]:
+            existing = db.execute("SELECT id FROM item WHERE name=?", (name,)).fetchone()
+            if not existing:
+                db.execute("INSERT INTO item (name, catid, code, hasquality) VALUES (?, ?, ?, 1)", (name, catid, code))
+        self.set_schema_version(db, 2)
         db.execute("INSERT OR IGNORE INTO systems (id, Name, Code) VALUES (68, 'Stanton', 'ST')")
         db.commit()
 
@@ -152,32 +203,39 @@ class InventoryStore:
         ).fetchall()
         return rows, total
 
-    def add_item(self, db, name, catid, item_id=None):
+    def items(self, db):
+        return db.execute("SELECT id, name, catid, hasquality, code FROM item ORDER BY name").fetchall()
+
+    def all_items(self, db, page=1, per_page=50):
+        count_row = db.execute("SELECT COUNT(*) AS cnt FROM item").fetchone()
+        total = count_row["cnt"] if count_row else 0
+        offset = (int(page) - 1) * int(per_page)
+        rows = db.execute(
+            "SELECT id, name, catid, hasquality, code FROM item ORDER BY name LIMIT ? OFFSET ?",
+            (int(per_page), offset),
+        ).fetchall()
+        return rows, total
+
+    def add_item(self, db, name, catid, item_id=None, hasquality=0, code=""):
         if item_id:
-            db.execute("INSERT INTO item (id, name, catid) VALUES (?, ?, ?)", (int(item_id), name, int(catid) if catid else None))
+            db.execute("INSERT INTO item (id, name, catid, hasquality, code) VALUES (?, ?, ?, ?, ?)",
+                       (int(item_id), name, int(catid) if catid else None, int(hasquality), code))
         else:
-            db.execute("INSERT INTO item (name, catid) VALUES (?, ?)", (name, int(catid) if catid else None))
+            db.execute("INSERT INTO item (name, catid, hasquality, code) VALUES (?, ?, ?, ?)",
+                       (name, int(catid) if catid else None, int(hasquality), code))
         db.commit()
 
-    def update_item(self, db, item_id, name, catid):
-        pass
-
-    def add_station(self, db, name, code, systemid, station_id=None):
-        if station_id:
-            db.execute("INSERT INTO stations (id, name, code, systemid) VALUES (?, ?, ?, ?)",
-                       (int(station_id), name, code, int(systemid) if systemid else None))
-        else:
-            db.execute("INSERT INTO stations (name, code, systemid) VALUES (?, ?, ?)",
-                       (name, code, int(systemid) if systemid else None))
-        db.commit()
-
-    def update_item(self, db, item_id, name, catid):
-        db.execute("UPDATE item SET name=?, catid=? WHERE id=?", (name, int(catid) if catid else None, int(item_id)))
+    def update_item(self, db, item_id, name, catid, hasquality=0, code=""):
+        db.execute("UPDATE item SET name=?, catid=?, hasquality=?, code=? WHERE id=?",
+                   (name, int(catid) if catid else None, int(hasquality), code, int(item_id)))
         db.commit()
 
     def delete_item(self, db, item_id):
         db.execute("DELETE FROM item WHERE id=?", (int(item_id),))
         db.commit()
+
+    def categories(self, db):
+        return db.execute("SELECT * FROM itemcategory ORDER BY id").fetchall()
 
     def systems(self, db):
         return db.execute("SELECT id, Name, Code FROM systems ORDER BY Name").fetchall()
