@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from store import InventoryStore
-from render import load_templates, render_manage, render_settings, render_setup, escape, cents_from_scu, ext_context, push_message
+from render import load_templates, render_manage, render_settings, render_setup, escape, cents_from_scu, ext_context
 from extensions import discover_extensions, Extension
 
 PITS_VERSION = "0.4.0"
@@ -132,15 +132,6 @@ NETWORK_URL = ""
 EXTENSIONS = []
 EXTENSION_CONTEXTS = {}
 
-_event_queue = []
-_event_cond = threading.Condition()
-
-
-def push_event(event_type, data):
-    with _event_cond:
-        _event_queue.append({"type": event_type, "data": data})
-        _event_cond.notify_all()
-
 
 class AppHandler(BaseHTTPRequestHandler):
     @staticmethod
@@ -197,29 +188,6 @@ class AppHandler(BaseHTTPRequestHandler):
             self.serve_static(BASE_DIR / "static" / "favicon.ico", "image/x-icon")
             return
 
-        if path == "/events":
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-Type", "text/event-stream")
-            self.send_header("Cache-Control", "no-cache")
-            self.send_header("Connection", "keep-alive")
-            self.end_headers()
-            idx = len(_event_queue)
-            try:
-                while True:
-                    with _event_cond:
-                        if idx < len(_event_queue):
-                            evt = _event_queue[idx]
-                            idx += 1
-                            self.wfile.write(f"data: {json.dumps(evt)}\n\n".encode())
-                            self.wfile.flush()
-                        else:
-                            _event_cond.wait(timeout=30)
-                            self.wfile.write(b": heartbeat\n\n")
-                            self.wfile.flush()
-            except (BrokenPipeError, ConnectionResetError, OSError):
-                pass
-            return
-
         raw = urllib.parse.parse_qs(parsed.query)
         qs = {k: v[0] for k, v in raw.items() if v[0]}
         notice = qs.pop("notice", "")
@@ -240,12 +208,12 @@ class AppHandler(BaseHTTPRequestHandler):
         with store.connect() as db:
             missing = store.missing_tables(db)
             if missing:
-                body = render_setup(missing, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, notice=notice, kind=kind)
+                body = render_setup(missing, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING)
                 self.respond(body)
                 return
 
             if path == "/" or path == "/manage":
-                body = render_manage(db, qs, store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS, pits_version=PITS_VERSION, notice=notice, kind=kind)
+                body = render_manage(db, qs, store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS, pits_version=PITS_VERSION)
                 self.respond(body)
                 return
 
@@ -258,7 +226,7 @@ class AppHandler(BaseHTTPRequestHandler):
                     ctx = EXTENSION_CONTEXTS.get(ext.name, {})
                     connected = ctx.get("ext_jock_connected", "false") == "true"
                     ext_list.append({"name": ext.name, "version": ext.version, "enabled": enabled, "connected": connected})
-                body = render_settings(DATABASE, db=db, store=store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS, extensions_list=ext_list, pits_version=PITS_VERSION, notice=notice, kind=kind)
+                body = render_settings(DATABASE, db=db, store=store, prefs=prefs, local_url=LOCAL_URL, network_url=NETWORK_URL, db_compat_warning=DB_COMPAT_WARNING, ext_ctx=EXTENSION_CONTEXTS, extensions_list=ext_list, pits_version=PITS_VERSION)
                 self.respond(body)
                 return
 
@@ -404,20 +372,10 @@ class AppHandler(BaseHTTPRequestHandler):
     def manage_add_item(self, db, data):
         name = data.get("name", "")
         catid = data.get("catid", "")
-        item_id = data.get("item_id", "")
-        hasquality = 1 if data.get("hasquality") == "1" else 0
-        code = data.get("code", "")
         if not name:
             self.redirect("Item name is required.", "error", "/manage")
             return
-        if item_id:
-            existing = db.execute("SELECT id FROM item WHERE id=? OR name=?", (int(item_id), name)).fetchone()
-            if existing:
-                self.redirect(f"ID {item_id} or name '{name}' already exists.", "error", "/settings")
-                return
-            store.add_item(db, name, catid, item_id=int(item_id), hasquality=hasquality, code=code)
-        else:
-            store.add_item(db, name, catid, hasquality=hasquality, code=code)
+        store.add_item(db, name, catid)
         self.redirect("Item added.", "success", "/settings")
 
     def manage_add_station(self, db, data):
@@ -762,7 +720,9 @@ class AppHandler(BaseHTTPRequestHandler):
         self.redirect(f"New database created at {new_path}.", "success", "/manage")
 
     def redirect(self, notice, kind="success", location="/manage"):
-        push_message(notice, kind)
+        from urllib.parse import urlencode
+        sep = "&" if "?" in location else "?"
+        location = location + sep + urlencode({"notice": notice, "kind": kind})
         self.send_response(HTTPStatus.SEE_OTHER)
         self.send_header("Location", location)
         self.send_header("Content-Length", "0")
