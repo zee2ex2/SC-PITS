@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from store import InventoryStore
-from render import load_templates, render_manage, render_settings, render_setup, escape, cents_from_scu, ext_context, push_message
+from render import load_templates, render_manage, render_settings, render_setup, escape, cents_from_scu, ext_context, push_message, push_event
 from extensions import discover_extensions, Extension
 
 PITS_VERSION = "0.4.0"
@@ -132,15 +132,6 @@ NETWORK_URL = ""
 EXTENSIONS = []
 EXTENSION_CONTEXTS = {}
 
-_event_queue = []
-_event_cond = threading.Condition()
-
-
-def push_event(event_type, data):
-    with _event_cond:
-        _event_queue.append({"type": event_type, "data": data})
-        _event_cond.notify_all()
-
 
 class AppHandler(BaseHTTPRequestHandler):
     @staticmethod
@@ -198,6 +189,7 @@ class AppHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/events":
+            from render import _event_queue, _event_cond
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")

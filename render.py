@@ -1,11 +1,14 @@
 import html
 import json
 import sys
+import threading
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from urllib.parse import urlencode
 
 _message_queue = []
+_event_queue = []
+_event_cond = threading.Condition()
 
 
 def push_message(text, kind="success"):
@@ -16,6 +19,12 @@ def pop_messages():
     msgs = list(_message_queue)
     _message_queue.clear()
     return msgs
+
+
+def push_event(event_type, data):
+    with _event_cond:
+        _event_queue.append({"type": event_type, "data": data})
+        _event_cond.notify_all()
 
 
 if getattr(sys, 'frozen', False):

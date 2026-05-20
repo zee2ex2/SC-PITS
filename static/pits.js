@@ -386,6 +386,13 @@ function installUpdates(dataStr) {
       var evt = JSON.parse(e.data);
       if (evt.type === "message") {
         showBanner(evt.data.text, evt.data.kind);
+      } else if (evt.type === "inventory_update") {
+        var onManage = window.location.pathname === "/" || window.location.pathname === "/manage";
+        if (onManage) {
+          window.location.reload();
+        } else {
+          showBanner("Inventory changed externally.", "warning");
+        }
       }
     } catch(_) {}
   };
