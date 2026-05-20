@@ -45,7 +45,7 @@ else:
     BASE_DIR = Path(__file__).resolve().parent
     DATA_DIR = BASE_DIR
 
-ICON_NAMES = ["AppIcon.icns", "icon_PITS.icns", "icon_PITS.png"]
+ICON_NAMES = ["AppIcon.icns"]
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH = DATA_DIR / "config.json"

@@ -16,8 +16,7 @@ pyinstaller --windowed --onedir \
   --add-data "$DIR/extensions:extensions" \
   --add-data "$DIR/config.json:." \
   --add-data "$DIR/mainInventory:." \
-  --add-data "$DIR/icon_PITS.icns:." \
-  --add-data "$DIR/icon_PITS.png:." \
+  --add-data "$DIR/AppIcon.icns:." \
   --hidden-import rumps \
   --distpath "$DIR/dist" \
   --workpath "$DIR/build" \
